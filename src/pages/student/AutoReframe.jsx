@@ -1,18 +1,79 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getStudent } from '../../lib/mockData';
 import { Alert } from '../../components/UI';
+import { getReframe } from '../../lib/gemmaApi';
 
 const STUDENT = getStudent('jamie');
 
+// Fallback content when Gemma is unavailable
+const FALLBACK = {
+  steps: [
+    { label: 'Step 1 — look at the bottom numbers', content: '³⁄₈ + ²⁄₈ — are the bottom numbers the same? Yes!' },
+    { label: 'Step 2 — just add the top numbers', content: '3 + 2 = ?' },
+  ],
+  simplifiedQuestion: {
+    text: '3 + 2 = ?',
+    options: ['5 → so the answer is ⁵⁄₈', '6 → so the answer is ⁶⁄₈', '4 → so the answer is ⁴⁄₈'],
+    correctIndex: 0,
+  },
+  encouragement: 'You got it! Way to go! 🌟',
+};
+
 export default function AutoReframe() {
   const navigate = useNavigate();
-  const [selected, setSelected] = useState(null);
+  const { state } = useLocation();
+  const { question, assignmentId, qIndex, studentId } = state || {};
+
+  const [selected, setSelected]   = useState(null);
+  const [reframeData, setReframeData] = useState(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState(null);
+
+  useEffect(() => {
+    if (!question) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    getReframe({
+      question,
+      studentProfile: {
+        name: STUDENT.name,
+        grade: STUDENT.grade,
+        characters: STUDENT.characters,
+        learningStyles: STUDENT.learningStyles,
+        frustrationTriggers: STUDENT.frustrationTriggers,
+      },
+      wrongAttempts: 2,
+    })
+      .then(data => {
+        if (!cancelled) setReframeData(data);
+      })
+      .catch(err => {
+        console.error('Reframe error:', err);
+        if (!cancelled) {
+          setError(err.message);
+          setReframeData(FALLBACK);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [question]);
+
+  // Use Gemma data if available, otherwise fallback
+  const data = reframeData || FALLBACK;
+  const steps = data.steps || FALLBACK.steps;
+  const simplified = data.simplifiedQuestion || FALLBACK.simplifiedQuestion;
+  const encouragement = data.encouragement || FALLBACK.encouragement;
 
   const handleAnswer = (idx) => {
     setSelected(idx);
-    if (idx === 0) {
-      // correct (5)
+    if (idx === simplified.correctIndex) {
       setTimeout(() => navigate('/student/complete'), 1200);
     }
   };
@@ -37,61 +98,76 @@ export default function AutoReframe() {
         </div>
       </div>
 
-      {/* Simplified / stepped version of the question */}
-      <div className="card">
-        <div className="char-bubble">{STUDENT.characters[0]} is here to help! 💙</div>
-
-        {/* Visual scaffold */}
-        <div style={{
-          background: 'var(--teal-light)', borderRadius: 'var(--radius-sm)',
-          padding: 12, fontSize: 12, color: 'var(--teal-dark)', marginBottom: 14,
-        }}>
-          📷 Cloudinary — step-by-step visual with pizza slices (simpler version)
-        </div>
-
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 4 }}>
-            Step 1 — look at the bottom numbers
-          </div>
-          <div style={{ fontSize: 15, background: 'var(--bg)', borderRadius: 6, padding: '8px 12px' }}>
-            ³⁄₈ + ²⁄₈ — are the bottom numbers the same? <strong>Yes!</strong>
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+          <div style={{ color: 'var(--text-muted)' }}>
+            {STUDENT.characters[0]} is thinking of a simpler way to explain this...
           </div>
         </div>
+      )}
 
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 4 }}>
-            Step 2 — just add the top numbers
-          </div>
+      {error && (
+        <Alert variant="coral">
+          Could not reach Gemma — using built-in explanation instead.
+        </Alert>
+      )}
+
+      {!loading && (
+        <div className="card">
+          <div className="char-bubble">{STUDENT.characters[0]} is here to help! 💙</div>
+
+          {/* Visual scaffold */}
           <div style={{
-            background: 'var(--purple-light)', borderRadius: 8, padding: 14,
-            textAlign: 'center', fontSize: 22, fontWeight: 500, color: 'var(--purple-dark)',
+            background: 'var(--teal-light)', borderRadius: 'var(--radius-sm)',
+            padding: 12, fontSize: 12, color: 'var(--teal-dark)', marginBottom: 14,
           }}>
-            3 + 2 = ?
+            📷 Cloudinary — step-by-step visual with pizza slices (simpler version)
           </div>
+
+          {/* Steps */}
+          {steps.map((step, i) => (
+            <div key={i} style={{ marginBottom: i < steps.length - 1 ? 10 : 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 4 }}>
+                {step.label}
+              </div>
+              <div style={{
+                background: i === steps.length - 1 ? 'var(--purple-light)' : 'var(--bg)',
+                borderRadius: i === steps.length - 1 ? 8 : 6,
+                padding: i === steps.length - 1 ? 14 : '8px 12px',
+                textAlign: i === steps.length - 1 ? 'center' : undefined,
+                fontSize: i === steps.length - 1 ? 22 : 15,
+                fontWeight: i === steps.length - 1 ? 500 : undefined,
+                color: i === steps.length - 1 ? 'var(--purple-dark)' : undefined,
+              }}>
+                {step.content}
+              </div>
+            </div>
+          ))}
+
+          {/* Simplified answer options */}
+          {simplified.options.map((opt, idx) => (
+            <div
+              key={idx}
+              className={`ans-opt${selected === idx ? (idx === simplified.correctIndex ? ' correct' : ' wrong') : ''}`}
+              onClick={() => selected === null && handleAnswer(idx)}
+              style={{ cursor: selected !== null ? 'default' : 'pointer' }}
+            >
+              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{String.fromCharCode(65 + idx)}.</span>
+              <span style={{ fontSize: 14 }}>{opt}</span>
+            </div>
+          ))}
+
+          {selected === simplified.correctIndex && (
+            <div style={{
+              marginTop: 10, padding: 10, borderRadius: 6,
+              background: 'var(--teal-light)', color: 'var(--teal-dark)', fontSize: 13,
+            }}>
+              {encouragement}
+            </div>
+          )}
         </div>
-
-        {/* Simplified answer options */}
-        {[['5 → so the answer is ⁵⁄₈', true], ['6 → so the answer is ⁶⁄₈', false], ['4 → so the answer is ⁴⁄₈', false]].map(([opt, correct], idx) => (
-          <div
-            key={idx}
-            className={`ans-opt${selected === idx ? (correct ? ' correct' : ' wrong') : ''}`}
-            onClick={() => selected === null && handleAnswer(idx)}
-            style={{ cursor: selected !== null ? 'default' : 'pointer' }}
-          >
-            <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{String.fromCharCode(65 + idx)}.</span>
-            <span style={{ fontSize: 14 }}>{opt}</span>
-          </div>
-        ))}
-
-        {selected === 0 && (
-          <div style={{
-            marginTop: 10, padding: 10, borderRadius: 6,
-            background: 'var(--teal-light)', color: 'var(--teal-dark)', fontSize: 13,
-          }}>
-            You got it! Way to go! 🌟
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Teacher notification */}
       <Alert variant="info">

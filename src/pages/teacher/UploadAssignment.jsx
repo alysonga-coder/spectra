@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { STUDENTS, ASSIGNMENTS } from '../../lib/mockData';
 import { Alert } from '../../components/UI';
+import { adaptLesson } from '../../lib/gemmaApi';
+import { useLessonContext } from '../../lib/LessonContext';
 
 const SUBJECTS = ['Math', 'Reading', 'Science', 'Social Skills', 'Writing'];
 
@@ -11,15 +13,59 @@ export default function UploadAssignment() {
   const [assignTo, setAssignTo]   = useState('all');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading]     = useState(false);
+  const [file, setFile]           = useState(null);
+  const [adaptedVersions, setAdaptedVersions] = useState(null);
+  const [previewStudent, setPreviewStudent]   = useState('jamie');
+  const [error, setError]         = useState(null);
+  const [approved, setApproved]   = useState(false);
 
-  const handleSubmit = () => {
+  const { saveLesson } = useLessonContext();
+
+  const handleSubmit = async () => {
     setLoading(true);
-    // TODO: call Gemma API here to generate adapted versions per student profile
-    setTimeout(() => {
-      setLoading(false);
+    setError(null);
+    try {
+      const targetStudents = assignTo === 'all'
+        ? STUDENTS
+        : STUDENTS.filter(s => s.id === assignTo);
+
+      const studentsPayload = targetStudents.map(s => ({
+        id: s.id,
+        name: s.name,
+        grade: s.grade,
+        learningStyles: s.learningStyles,
+        characters: s.characters,
+        sensoryPrefs: s.sensoryPrefs,
+        frustrationTriggers: s.frustrationTriggers,
+      }));
+
+      const result = await adaptLesson({
+        file,
+        rawContent: content,
+        subject,
+        students: studentsPayload,
+      });
+
+      setAdaptedVersions(result);
       setSubmitted(true);
-    }, 1500);
+    } catch (err) {
+      console.error('Adaptation error:', err);
+      setError(err.message || 'Failed to generate adapted lessons. Make sure the Gemma/Ollama server is running.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleApprove = () => {
+    if (adaptedVersions) {
+      const assignmentId = ASSIGNMENTS[0].id;
+      saveLesson(assignmentId, adaptedVersions);
+      setApproved(true);
+    }
+  };
+
+  const preview = adaptedVersions?.[previewStudent];
+  const previewStudentData = STUDENTS.find(s => s.id === previewStudent);
 
   return (
     <div className="page">
@@ -31,10 +77,21 @@ export default function UploadAssignment() {
         </div>
       </div>
 
-      {submitted && (
+      {error && (
+        <Alert variant="coral">
+          {error}
+        </Alert>
+      )}
+
+      {approved && (
         <Alert variant="info">
-          Adapted versions generated for {STUDENTS.length} students. Cloudinary images queued. ElevenLabs narration ready.{' '}
-          <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>Preview all →</span>
+          Lessons approved and assigned! Students can now access the adapted content.
+        </Alert>
+      )}
+
+      {submitted && !approved && (
+        <Alert variant="info">
+          Adapted versions generated for {Object.keys(adaptedVersions || {}).length} students. Review the preview and click "Approve + Assign" when ready.
         </Alert>
       )}
 
@@ -66,7 +123,12 @@ export default function UploadAssignment() {
               </div>
               <div>
                 <label className="label">Upload file (optional)</label>
-                <input className="input" type="file" accept=".pdf,.doc,.docx" />
+                <input
+                  className="input"
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                  onChange={e => setFile(e.target.files[0] || null)}
+                />
               </div>
             </div>
             <div>
@@ -83,7 +145,7 @@ export default function UploadAssignment() {
                 onClick={handleSubmit}
                 disabled={loading}
               >
-                {loading ? 'Generating...' : 'Adapt + assign with Gemma'}
+                {loading ? 'Generating with Gemma...' : 'Adapt + assign with Gemma'}
               </button>
             </div>
           </div>
@@ -91,30 +153,99 @@ export default function UploadAssignment() {
 
         {/* Preview of adapted version */}
         <div className="card">
-          <div className="card-title">Preview — Jamie L. (visual · Bluey)</div>
-          <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: '1rem', fontSize: 13, lineHeight: 1.7 }}>
-            <div className="char-bubble">🐕 Bluey says: Pizza time!</div>
-            <p style={{ marginBottom: 8 }}>
-              Bluey and Bingo are sharing a pizza with <strong>8 slices</strong> — that's the bottom number!
-              Bluey takes <strong>3</strong>, Bingo takes <strong>2</strong>. How many do they have together?
-            </p>
-            <div style={{
-              background: 'var(--purple-light)', borderRadius: 8, padding: 12,
-              textAlign: 'center', fontSize: 18, fontWeight: 500, color: 'var(--purple-dark)', margin: '10px 0',
-            }}>
-              ³⁄₈ + ²⁄₈ = ?
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div className="card-title" style={{ margin: 0 }}>
+              Preview — {previewStudentData?.name || 'Student'}
             </div>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              Just add the top numbers! 3 + 2 = 5, so the answer is ⁵⁄₈.
-            </p>
+            {submitted && adaptedVersions && (
+              <select
+                className="select-input"
+                style={{ width: 'auto', fontSize: 12 }}
+                value={previewStudent}
+                onChange={e => setPreviewStudent(e.target.value)}
+              >
+                {Object.keys(adaptedVersions).map(sid => {
+                  const s = STUDENTS.find(st => st.id === sid);
+                  return <option key={sid} value={sid}>{s?.name || sid}</option>;
+                })}
+              </select>
+            )}
           </div>
+
+          {loading && (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+              <div>Gemma is analyzing the worksheet and generating personalized lessons...</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>This may take 10–30 seconds per student.</div>
+            </div>
+          )}
+
+          {!loading && preview && !preview.error && (
+            <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: '1rem', fontSize: 13, lineHeight: 1.7 }}>
+              <div className="char-bubble">
+                {previewStudentData?.characters?.[0] || '⭐'} says: Let's learn!
+              </div>
+              <p style={{ marginBottom: 8 }}>
+                {preview.adaptedText}
+              </p>
+              {preview.formula && (
+                <div style={{
+                  background: 'var(--purple-light)', borderRadius: 8, padding: 12,
+                  textAlign: 'center', fontSize: 18, fontWeight: 500, color: 'var(--purple-dark)', margin: '10px 0',
+                }}>
+                  {preview.formula}
+                </div>
+              )}
+              {preview.hint && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {preview.hint}
+                </p>
+              )}
+              {preview.questions && preview.questions.length > 0 && (
+                <div style={{ marginTop: 10, fontSize: 12 }}>
+                  <strong>Questions ({preview.questions.length}):</strong>
+                  {preview.questions.map((q, i) => (
+                    <div key={i} style={{ marginTop: 4, paddingLeft: 8 }}>
+                      {i + 1}. {q.text}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!loading && preview && preview.error && (
+            <div style={{ padding: '1rem', color: 'var(--coral-dark)', background: 'var(--coral-light)', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
+              Failed to generate for this student: {preview.error}
+            </div>
+          )}
+
+          {!loading && !preview && !submitted && (
+            <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: '1rem', fontSize: 13, lineHeight: 1.7 }}>
+              <div className="char-bubble">🐕 Bluey says: Pizza time!</div>
+              <p style={{ marginBottom: 8 }}>
+                Bluey and Bingo are sharing a pizza with <strong>8 slices</strong> — that's the bottom number!
+                Bluey takes <strong>3</strong>, Bingo takes <strong>2</strong>. How many do they have together?
+              </p>
+              <div style={{
+                background: 'var(--purple-light)', borderRadius: 8, padding: 12,
+                textAlign: 'center', fontSize: 18, fontWeight: 500, color: 'var(--purple-dark)', margin: '10px 0',
+              }}>
+                ³⁄₈ + ²⁄₈ = ?
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                Just add the top numbers! 3 + 2 = 5, so the answer is ⁵⁄₈.
+              </p>
+            </div>
+          )}
 
           {/* Placeholder for Cloudinary image */}
           <div style={{
             marginTop: 12, background: 'var(--teal-light)', borderRadius: 'var(--radius-sm)',
             padding: 12, fontSize: 12, color: 'var(--teal-dark)',
           }}>
-            📷 Cloudinary — themed character image will load here (pizza + Bluey illustration)
+            📷 Cloudinary — themed character image will load here
+            {preview?.cloudinaryPrompt && ` (${preview.cloudinaryPrompt})`}
           </div>
 
           {/* ElevenLabs audio */}
@@ -126,8 +257,16 @@ export default function UploadAssignment() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="btn btn-secondary btn-sm">Regenerate</button>
-            <button className="btn btn-primary btn-sm">Approve for Jamie</button>
+            <button className="btn btn-secondary btn-sm" onClick={handleSubmit} disabled={loading}>
+              Regenerate
+            </button>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={handleApprove}
+              disabled={!submitted || approved}
+            >
+              {approved ? 'Approved!' : 'Approve + Assign'}
+            </button>
           </div>
         </div>
       </div>

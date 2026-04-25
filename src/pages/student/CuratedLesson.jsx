@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getAssignment, getStudent } from '../../lib/mockData';
 import { useFrustration } from '../../lib/useFrustration';
 import { FrustrationBar, SigRow, TlItem, Alert } from '../../components/UI';
+import { useLessonContext } from '../../lib/LessonContext';
 
 const STUDENT = getStudent('jamie');
 const MODES   = ['Visual', 'Listen', 'Read'];
@@ -11,6 +12,13 @@ export default function CuratedLesson() {
   const { assignmentId } = useParams();
   const navigate         = useNavigate();
   const assignment       = getAssignment(assignmentId);
+  const { getAdaptedVersion } = useLessonContext();
+
+  // Get Gemma-generated content if available
+  const adaptedVersion = getAdaptedVersion(assignmentId, STUDENT.id);
+  const questions = adaptedVersion?.questions?.length
+    ? adaptedVersion.questions
+    : assignment.questions;
 
   const [mode, setMode]         = useState('Visual');
   const [qIndex, setQIndex]     = useState(0);
@@ -20,13 +28,19 @@ export default function CuratedLesson() {
     { text: `${STUDENT.characters[0]} visual mode loaded per profile`, time: '9:02 AM', color: 'var(--teal)' },
   ]);
 
-  const question = assignment.questions[qIndex];
+  const question = questions[qIndex];
 
   const onFrustrationTriggered = useCallback((score) => {
-    // TODO: notify teacher via websocket/Supabase realtime
     console.log('Frustration threshold crossed:', score);
-    navigate('/student/reframe');
-  }, [navigate]);
+    navigate('/student/reframe', {
+      state: {
+        question,
+        assignmentId,
+        qIndex,
+        studentId: STUDENT.id,
+      },
+    });
+  }, [navigate, question, assignmentId, qIndex]);
 
   const frustration = useFrustration({ onFrustrationTriggered });
 
@@ -43,18 +57,37 @@ export default function CuratedLesson() {
       ]);
     } else {
       frustration.recordWrongAnswer();
-      const newScore = frustration.frustrationScore + 30;
-      const hint = frustration.wrongAttempts >= 1;
-      setFeedback({
-        correct: false,
-        text: hint
-          ? `Hint: add just the top numbers — what is ${question.text.match(/\d/g)?.[0] || '?'} + ${question.text.match(/\d/g)?.[1] || '?'}?`
-          : 'Not quite — try again!',
-      });
+      const wrongCount = frustration.wrongAttempts + 1;
+
+      // Use Gemma-generated hint if available
+      const gemmaHint = question?.hint;
+      const defaultHint = `Hint: add just the top numbers — what is ${question.text.match(/\d/g)?.[0] || '?'} + ${question.text.match(/\d/g)?.[1] || '?'}?`;
+      const showHint = wrongCount >= 2;
+
+      let feedbackText = 'Not quite — try again!';
+      if (showHint) {
+        feedbackText = gemmaHint || defaultHint;
+      }
+
+      setFeedback({ correct: false, text: feedbackText });
       setAdaptLog(prev => [
-        { text: `Wrong attempt ${frustration.wrongAttempts + 1} — ${hint ? 'hint shown' : 'encouraging message'}`, time: 'Now', color: 'var(--amber)' },
+        { text: `Wrong attempt ${wrongCount} — ${showHint ? 'hint shown' : 'encouraging message'}`, time: 'Now', color: 'var(--amber)' },
         ...prev,
       ]);
+
+      // After 3+ wrong attempts, navigate to reframe
+      if (wrongCount >= 3) {
+        setTimeout(() => {
+          navigate('/student/reframe', {
+            state: {
+              question,
+              assignmentId,
+              qIndex,
+              studentId: STUDENT.id,
+            },
+          });
+        }, 1500);
+      }
     }
   };
 
@@ -67,7 +100,7 @@ export default function CuratedLesson() {
   };
 
   const handleNext = () => {
-    if (qIndex < assignment.questions.length - 1) {
+    if (qIndex < questions.length - 1) {
       setQIndex(q => q + 1);
       setSelected(null);
       setFeedback(null);
@@ -94,12 +127,12 @@ export default function CuratedLesson() {
             </span>
           ))}
           <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>
-            {qIndex + 1} of {assignment.questions.length}
+            {qIndex + 1} of {questions.length}
           </span>
         </div>
         {/* Progress dots */}
         <div className="row" style={{ gap: 6 }}>
-          {assignment.questions.map((_, i) => (
+          {questions.map((_, i) => (
             <div key={i} style={{
               width: 8, height: 8, borderRadius: '50%',
               background: i < qIndex ? 'var(--teal)' : i === qIndex ? 'var(--purple)' : 'var(--border-md)',
@@ -112,7 +145,14 @@ export default function CuratedLesson() {
       <div className="card">
         <div className="char-bubble">{STUDENT.characters[0]} says: Let's do this! ⭐</div>
 
-        {/* TODO: replace with real Cloudinary image */}
+        {/* Adapted text from Gemma */}
+        {adaptedVersion?.adaptedText && (
+          <p style={{ fontSize: 13, marginBottom: 12, lineHeight: 1.7 }}>
+            {adaptedVersion.adaptedText}
+          </p>
+        )}
+
+        {/* Cloudinary image placeholder */}
         {mode === 'Visual' && (
           <div style={{
             background: 'var(--purple-light)', borderRadius: 'var(--radius-sm)',
@@ -123,7 +163,7 @@ export default function CuratedLesson() {
           </div>
         )}
 
-        {/* TODO: replace with real ElevenLabs audio player */}
+        {/* ElevenLabs audio placeholder */}
         {mode === 'Listen' && (
           <div style={{
             background: 'var(--blue-light)', borderRadius: 'var(--radius-sm)',
@@ -140,13 +180,13 @@ export default function CuratedLesson() {
         </div>
 
         {/* Formula display */}
-        {assignment.adaptedVersions?.jamie?.formula && (
+        {(adaptedVersion?.formula || assignment.adaptedVersions?.jamie?.formula) && (
           <div style={{
             background: 'var(--purple-light)', borderRadius: 8, padding: 12,
             textAlign: 'center', fontSize: 20, fontWeight: 500,
             color: 'var(--purple-dark)', marginBottom: 14,
           }}>
-            {assignment.adaptedVersions.jamie.formula}
+            {adaptedVersion?.formula || assignment.adaptedVersions.jamie.formula}
           </div>
         )}
 
@@ -183,7 +223,7 @@ export default function CuratedLesson() {
           </button>
           {feedback?.correct && (
             <button className="btn btn-primary btn-sm" onClick={handleNext}>
-              {qIndex < assignment.questions.length - 1 ? 'Next question →' : 'Finish!'}
+              {qIndex < questions.length - 1 ? 'Next question →' : 'Finish!'}
             </button>
           )}
         </div>
@@ -197,7 +237,7 @@ export default function CuratedLesson() {
         <div className="card-sm">
           <SigRow label="Rapid clicks"              value={`${frustration.rapidClickCount} recent`} valueColor={frustration.rapidClickCount >= 3 ? 'var(--amber-dark)' : undefined} />
           <SigRow label="Wrong attempts"            value={`${frustration.wrongAttempts}`}          valueColor={frustration.wrongAttempts >= 2 ? 'var(--coral)' : undefined} />
-          <SigRow label='"I don\'t understand"'     value={`${frustration.idkClicks}×`}             valueColor={frustration.idkClicks >= 2 ? 'var(--amber-dark)' : undefined} />
+          <SigRow label='"I don&apos;t understand"' value={`${frustration.idkClicks}×`}             valueColor={frustration.idkClicks >= 2 ? 'var(--amber-dark)' : undefined} />
           <SigRow label="Flagged phrases"           value={`${frustration.flaggedPhrases.length}`} />
           <div style={{ marginTop: 10 }}>
             <FrustrationBar score={frustration.frustrationScore} />

@@ -9,22 +9,56 @@
 
 ```bash
 npm install
-npm start
+npm start          # starts both React (port 3000) + Express API (port 3001)
 ```
 
 Open http://localhost:3000
+
+### Running Gemma (Ollama)
+
+The backend calls Gemma via Ollama for AI lesson adaptation. To set it up:
+
+```bash
+# Install Ollama — https://ollama.com/download
+ollama pull gemma2       # or gemma2:2b for faster responses
+ollama serve             # starts Ollama on localhost:11434
+```
+
+The app gracefully falls back to mock data if Ollama is not running.
+
+### Individual server commands
+
+```bash
+npm run start:client     # React dev server only (port 3000)
+npm run start:server     # Express API only (port 3001)
+```
+
+### API endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/adapt-lesson` | Upload a worksheet (multipart) + student profiles → get adapted lessons per student |
+| POST | `/api/reframe` | Send a question + student profile → get simplified step-by-step breakdown |
+| GET | `/api/health` | Server health check |
 
 ---
 
 ## Project structure
 
 ```
+server/
+  index.js                      # Express API server (port 3001)
+  gemma.js                      # Gemma/Ollama client — lesson adaptation + reframe
+  parseFile.js                  # PDF/image file parser
+  uploads/                      # Temporary file upload directory
 src/
-  App.js                        # Routing — all 13 screens wired
+  App.js                        # Routing — all 13 screens wired + LessonProvider
   index.css                     # Global design tokens + utility classes
   lib/
     mockData.js                 # All demo data: students, assignments, config
     useFrustration.js           # Frustration detection hook
+    gemmaApi.js                 # Frontend API helpers for Gemma endpoints
+    LessonContext.jsx            # React context for storing adapted lessons
   components/
     UI.jsx                      # Shared UI primitives (Badge, Avatar, etc.)
     TeacherLayout.jsx            # Teacher nav wrapper
