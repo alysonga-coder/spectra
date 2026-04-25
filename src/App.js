@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { LessonProvider } from './lib/LessonContext';
 
 // Shared
 import Landing from './pages/Landing';
@@ -27,6 +28,7 @@ import StudentLayout from './components/StudentLayout';
 export default function App() {
   return (
     <BrowserRouter>
+    <LessonProvider>
       <Routes>
         {/* Shared landing */}
         <Route path="/"        element={<Landing />} />
@@ -56,6 +58,7 @@ export default function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+    </LessonProvider>
     </BrowserRouter>
   );
 }
