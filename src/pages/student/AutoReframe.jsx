@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getStudent } from '../../lib/mockData';
 import { Alert } from '../../components/UI';
-import { getReframe } from '../../lib/gemmaApi';
+import { generateReframe } from '../../lib/geminiClient';
 
 const STUDENT = getStudent('jamie');
 
@@ -23,7 +23,7 @@ const FALLBACK = {
 export default function AutoReframe() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { question, assignmentId, qIndex, studentId } = state || {};
+  const { question, studentProfile, wrongAttempts, assignmentId, qIndex, studentId } = state || {};
 
   const [selected, setSelected]   = useState(null);
   const [reframeData, setReframeData] = useState(null);
@@ -37,17 +37,15 @@ export default function AutoReframe() {
     setLoading(true);
     setError(null);
 
-    getReframe({
-      question,
-      studentProfile: {
-        name: STUDENT.name,
-        grade: STUDENT.grade,
-        characters: STUDENT.characters,
-        learningStyles: STUDENT.learningStyles,
-        frustrationTriggers: STUDENT.frustrationTriggers,
-      },
-      wrongAttempts: 2,
-    })
+    const profile = studentProfile || {
+      name: STUDENT.name,
+      grade: STUDENT.grade,
+      characters: STUDENT.characters,
+      learningStyles: STUDENT.learningStyles,
+      frustrationTriggers: STUDENT.frustrationTriggers,
+    };
+
+    generateReframe(question, profile, wrongAttempts || 2)
       .then(data => {
         if (!cancelled) setReframeData(data);
       })

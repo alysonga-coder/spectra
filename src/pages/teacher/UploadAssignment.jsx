@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { STUDENTS, ASSIGNMENTS } from '../../lib/mockData';
 import { Alert } from '../../components/UI';
-import { adaptLesson } from '../../lib/gemmaApi';
+import { adaptLesson, extractTextFromFile } from '../../lib/geminiClient';
 import { useLessonContext } from '../../lib/LessonContext';
 
 const SUBJECTS = ['Math', 'Reading', 'Science', 'Social Skills', 'Writing'];
@@ -25,6 +25,18 @@ export default function UploadAssignment() {
     setLoading(true);
     setError(null);
     try {
+      let rawContent = content || '';
+
+      if (file) {
+        const extractedText = await extractTextFromFile(file);
+        rawContent = rawContent ? `${rawContent}\n\n${extractedText}` : extractedText;
+      }
+
+      if (!rawContent.trim()) {
+        setError('Please provide lesson content or upload a file.');
+        return;
+      }
+
       const targetStudents = assignTo === 'all'
         ? STUDENTS
         : STUDENTS.filter(s => s.id === assignTo);
@@ -35,22 +47,17 @@ export default function UploadAssignment() {
         grade: s.grade,
         learningStyles: s.learningStyles,
         characters: s.characters,
-        sensoryPrefs: s.sensoryPrefs,
         frustrationTriggers: s.frustrationTriggers,
       }));
 
-      const result = await adaptLesson({
-        file,
-        rawContent: content,
-        subject,
-        students: studentsPayload,
-      });
+      const result = await adaptLesson(rawContent, subject, studentsPayload);
 
       setAdaptedVersions(result);
+      localStorage.setItem('spectra_adapted_lesson', JSON.stringify(result));
       setSubmitted(true);
     } catch (err) {
       console.error('Adaptation error:', err);
-      setError(err.message || 'Failed to generate adapted lessons. Make sure the Gemma/Ollama server is running.');
+      setError(err.message || 'Failed to generate adapted lessons. Check your Gemini API key.');
     } finally {
       setLoading(false);
     }

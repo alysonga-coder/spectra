@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAssignment, getStudent } from '../../lib/mockData';
 import { useFrustration } from '../../lib/useFrustration';
@@ -14,8 +14,24 @@ export default function CuratedLesson() {
   const assignment       = getAssignment(assignmentId);
   const { getAdaptedVersion } = useLessonContext();
 
-  // Get Gemma-generated content if available
-  const adaptedVersion = getAdaptedVersion(assignmentId, STUDENT.id);
+  // Load Gemma-generated content from LessonContext or localStorage
+  const contextVersion = getAdaptedVersion(assignmentId, STUDENT.id);
+  const [gemmaLesson, setGemmaLesson] = useState(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('spectra_adapted_lesson');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const studentLesson = parsed[STUDENT?.id || 'jamie'];
+        if (studentLesson) setGemmaLesson(studentLesson);
+      } catch (e) {
+        console.error('Failed to parse stored lesson:', e);
+      }
+    }
+  }, []);
+
+  const adaptedVersion = contextVersion || gemmaLesson;
   const questions = adaptedVersion?.questions?.length
     ? adaptedVersion.questions
     : assignment.questions;
@@ -35,12 +51,14 @@ export default function CuratedLesson() {
     navigate('/student/reframe', {
       state: {
         question,
+        studentProfile: STUDENT,
+        wrongAttempts: frustration.wrongAttempts,
         assignmentId,
         qIndex,
         studentId: STUDENT.id,
       },
     });
-  }, [navigate, question, assignmentId, qIndex]);
+  }, [navigate, question, assignmentId, qIndex, frustration.wrongAttempts]);
 
   const frustration = useFrustration({ onFrustrationTriggered });
 
@@ -81,6 +99,8 @@ export default function CuratedLesson() {
           navigate('/student/reframe', {
             state: {
               question,
+              studentProfile: STUDENT,
+              wrongAttempts: wrongCount,
               assignmentId,
               qIndex,
               studentId: STUDENT.id,
