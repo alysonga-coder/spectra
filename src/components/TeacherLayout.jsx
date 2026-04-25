@@ -28,6 +28,7 @@ export default function TeacherLayout() {
   const [showNewClass, setShowNewClass]       = useState(false);
   const [newClassName, setNewClassName]       = useState('');
   const [newClassRoom, setNewClassRoom]       = useState('');
+  const [classError, setClassError]           = useState('');
 
   const profileRef = useRef(null);
   const classRef   = useRef(null);
@@ -57,6 +58,7 @@ export default function TeacherLayout() {
 
   async function handleAddClass() {
     if (!newClassName.trim()) return;
+    setClassError('');
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
     for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
@@ -67,7 +69,10 @@ export default function TeacherLayout() {
       try {
         await updateDoc(doc(db, 'users', userProfile.uid), { classes: updated });
         await refreshProfile();
-      } catch { /* fallback: just update locally */ }
+      } catch {
+        setClassError('Failed to save class. Please try again.');
+        return;
+      }
     }
     setActiveClassIdx(updated.length - 1);
     setNewClassName('');
@@ -151,6 +156,9 @@ export default function TeacherLayout() {
                   </div>
                 ) : (
                   <div style={{ padding: 12 }}>
+                    {classError && (
+                      <div style={{ fontSize: 11, color: '#991B1B', marginBottom: 8 }}>{classError}</div>
+                    )}
                     <input
                       className="input"
                       placeholder="Class name"

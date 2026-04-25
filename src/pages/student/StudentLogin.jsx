@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 export default function StudentLogin() {
   const navigate = useNavigate();
@@ -16,6 +18,7 @@ export default function StudentLogin() {
     try {
       const profile = await login(email, password);
       if (profile?.role !== 'student') {
+        await signOut(auth);
         setError('This account is not a student account.');
         setBusy(false);
         return;
