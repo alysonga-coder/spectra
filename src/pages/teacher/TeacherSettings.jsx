@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
-import { TEACHER, STUDENTS } from '../../lib/mockData';
+import { STUDENTS } from '../../lib/mockData';
 import { useAuth } from '../../lib/AuthContext';
 import { Avatar } from '../../components/UI';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 export default function TeacherSettings() {
-  const { logout } = useAuth();
+  const { logout, userProfile, refreshProfile } = useAuth();
+
+  // Editable profile state (seeded from Firestore profile)
+  const [profileName, setProfileName] = useState(userProfile?.name || '');
+  const [profileSchool, setProfileSchool] = useState(userProfile?.school || '');
+  const [profileRoom, setProfileRoom] = useState(userProfile?.room || '');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState('');
 
   // Password form state
   const [currentPw, setCurrentPw] = useState('');
@@ -18,8 +27,42 @@ export default function TeacherSettings() {
   const [newName, setNewName] = useState('');
   const [newGrade, setNewGrade] = useState('');
 
-  // Class code
-  const classCode = TEACHER.room ? TEACHER.room.replace('Room ', 'SV-') : 'SV-4B';
+  // Class code derived from profile or fallback
+  const classCode = userProfile?.classes?.[0]?.code
+    || (userProfile?.room ? userProfile.room.replace('Room ', 'SV-') : 'SV-4B');
+
+  async function handleProfileSave(e) {
+    e.preventDefault();
+    if (!profileName.trim() || !profileSchool.trim() || !profileRoom.trim()) {
+      setProfileMsg('Please fill in all fields.');
+      return;
+    }
+    setProfileSaving(true);
+    setProfileMsg('');
+    try {
+      const ref = doc(db, 'users', userProfile.uid);
+      const updates = {
+        name: profileName.trim(),
+        school: profileSchool.trim(),
+        room: profileRoom.trim(),
+      };
+      // Also update the first class entry name if it exists
+      if (userProfile.classes && userProfile.classes.length > 0) {
+        const updatedClasses = userProfile.classes.map((c, i) =>
+          i === 0
+            ? { ...c, name: `${profileName.trim()} - ${profileRoom.trim()}`, room: profileRoom.trim() }
+            : c
+        );
+        updates.classes = updatedClasses;
+      }
+      await updateDoc(ref, updates);
+      await refreshProfile();
+      setProfileMsg('Profile updated!');
+    } catch (err) {
+      setProfileMsg('Failed to save — ' + (err.message || 'please try again.'));
+    }
+    setProfileSaving(false);
+  }
 
   function handlePasswordSubmit(e) {
     e.preventDefault();
@@ -89,42 +132,54 @@ export default function TeacherSettings() {
 
       <div style={{ maxWidth: 600 }}>
 
-        {/* ── Account card ── */}
+        {/* ── Teacher Profile card ── */}
         <div className="card" style={{ marginBottom: 16 }}>
-          <div className="card-title">Account</div>
+          <div className="card-title">Teacher Profile</div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-            {TEACHER.email}
+            Update your display name, school, or room number
           </div>
 
-          <form onSubmit={handlePasswordSubmit}>
-            <label className="label">Current password</label>
+          <form onSubmit={handleProfileSave}>
+            <label className="label">Full name</label>
             <input
               className="input"
-              type="password"
-              value={currentPw}
-              onChange={e => setCurrentPw(e.target.value)}
+              value={profileName}
+              onChange={e => setProfileName(e.target.value)}
+              placeholder="e.g. Ms. Rivera"
               style={{ marginBottom: 8 }}
             />
 
-            <label className="label">New password</label>
+            <label className="label">School name</label>
             <input
               className="input"
-              type="password"
-              value={newPw}
-              onChange={e => setNewPw(e.target.value)}
+              value={profileSchool}
+              onChange={e => setProfileSchool(e.target.value)}
+              placeholder="e.g. Sunview Elementary"
               style={{ marginBottom: 8 }}
             />
 
-            <label className="label">Confirm new password</label>
+            <label className="label">Room / Class name</label>
             <input
               className="input"
-              type="password"
-              value={confirmPw}
-              onChange={e => setConfirmPw(e.target.value)}
+              value={profileRoom}
+              onChange={e => setProfileRoom(e.target.value)}
+              placeholder="e.g. Room 4B"
               style={{ marginBottom: 12 }}
             />
 
-            <button type="submit" className="btn btn-primary">Update password</button>
+            <button type="submit" className="btn btn-primary" disabled={profileSaving}>
+              {profileSaving ? 'Saving…' : 'Save changes'}
+            </button>
+
+            {profileMsg && (
+              <div style={{
+                marginTop: 8,
+                fontSize: 13,
+                color: profileMsg.startsWith('Failed') ? '#991B1B' : 'var(--teal)',
+              }}>
+                {profileMsg}
+              </div>
+            )}
           </form>
         </div>
 
@@ -203,6 +258,45 @@ export default function TeacherSettings() {
               </button>
             </form>
           </div>
+        </div>
+
+        {/* ── Account / Change Password card ── */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-title">Change Password</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+            {userProfile?.email || ''}
+          </div>
+
+          <form onSubmit={handlePasswordSubmit}>
+            <label className="label">Current password</label>
+            <input
+              className="input"
+              type="password"
+              value={currentPw}
+              onChange={e => setCurrentPw(e.target.value)}
+              style={{ marginBottom: 8 }}
+            />
+
+            <label className="label">New password</label>
+            <input
+              className="input"
+              type="password"
+              value={newPw}
+              onChange={e => setNewPw(e.target.value)}
+              style={{ marginBottom: 8 }}
+            />
+
+            <label className="label">Confirm new password</label>
+            <input
+              className="input"
+              type="password"
+              value={confirmPw}
+              onChange={e => setConfirmPw(e.target.value)}
+              style={{ marginBottom: 12 }}
+            />
+
+            <button type="submit" className="btn btn-primary">Update password</button>
+          </form>
         </div>
 
         {/* ── Log Out card ── */}
