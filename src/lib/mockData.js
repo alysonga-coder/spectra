@@ -51,7 +51,7 @@ export const STUDENTS = [
     initials: 'ER',
     grade: 'Grade 3',
     avatarColor: { bg: '#FAECE7', text: '#4A1B0C' },
-    learningStyles: ['Tactile', 'Visual'],
+    learningStyles: ['Kinesthetic', 'Visual'],
     allStyles: ['Visual', 'Auditory', 'Reading', 'Kinesthetic'],
     characters: ['Minecraft Steve'],
     allCharacters: ['Bluey', 'Bingo', 'Paw Patrol', 'SpongeBob', 'Minecraft Steve', 'Mirabel (Encanto)'],
@@ -290,7 +290,7 @@ export const PUBLISHED_ASSIGNMENTS = [
     studentStatus: {
       jamie: { status: 'in-progress', adaptedMode: 'Visual + Bluey theme' },
       maya:  { status: 'in-progress', adaptedMode: 'Auditory + Paw Patrol theme' },
-      eli:   { status: 'not-started', adaptedMode: 'Tactile + Minecraft theme' },
+      eli:   { status: 'not-started', adaptedMode: 'Kinesthetic + Minecraft theme' },
       sofia: { status: 'completed',   adaptedMode: 'Reading + Encanto theme' },
     },
   },
@@ -304,7 +304,7 @@ export const PUBLISHED_ASSIGNMENTS = [
     studentStatus: {
       jamie: { status: 'not-started', adaptedMode: 'Visual + Bluey theme' },
       maya:  { status: 'not-started', adaptedMode: 'Auditory + Paw Patrol theme' },
-      eli:   { status: 'not-started', adaptedMode: 'Tactile + Minecraft theme' },
+      eli:   { status: 'not-started', adaptedMode: 'Kinesthetic + Minecraft theme' },
       sofia: { status: 'not-started', adaptedMode: 'Reading + Encanto theme' },
     },
   },
@@ -322,7 +322,7 @@ export const PAST_ASSIGNMENTS = [
     studentResults: {
       jamie: { score: 90, questionsCorrect: 9, questionsTotal: 10, reframes: 0, timeSpent: '12 min', adaptedMode: 'Visual + Bluey' },
       maya:  { score: 75, questionsCorrect: 6, questionsTotal: 8, reframes: 1, timeSpent: '18 min', adaptedMode: 'Auditory + Paw Patrol' },
-      eli:   { score: 60, questionsCorrect: 6, questionsTotal: 10, reframes: 3, timeSpent: '25 min', adaptedMode: 'Tactile + Minecraft' },
+      eli:   { score: 60, questionsCorrect: 6, questionsTotal: 10, reframes: 3, timeSpent: '25 min', adaptedMode: 'Kinesthetic + Minecraft' },
       sofia: { score: 95, questionsCorrect: 19, questionsTotal: 20, reframes: 0, timeSpent: '10 min', adaptedMode: 'Reading + Encanto' },
     },
   },
@@ -336,7 +336,7 @@ export const PAST_ASSIGNMENTS = [
     studentResults: {
       jamie: { score: 85, questionsCorrect: 17, questionsTotal: 20, reframes: 1, timeSpent: '14 min', adaptedMode: 'Visual + Bluey' },
       maya:  { score: 70, questionsCorrect: 7, questionsTotal: 10, reframes: 2, timeSpent: '20 min', adaptedMode: 'Auditory + Paw Patrol' },
-      eli:   { score: 55, questionsCorrect: 11, questionsTotal: 20, reframes: 4, timeSpent: '30 min', adaptedMode: 'Tactile + Minecraft' },
+      eli:   { score: 55, questionsCorrect: 11, questionsTotal: 20, reframes: 4, timeSpent: '30 min', adaptedMode: 'Kinesthetic + Minecraft' },
       sofia: { score: 100, questionsCorrect: 10, questionsTotal: 10, reframes: 0, timeSpent: '8 min', adaptedMode: 'Reading + Encanto' },
     },
   },
@@ -350,7 +350,7 @@ export const PAST_ASSIGNMENTS = [
     studentResults: {
       jamie: { score: 82, questionsCorrect: 9, questionsTotal: 11, reframes: 1, timeSpent: '15 min', adaptedMode: 'Visual + Bluey' },
       maya:  { score: 88, questionsCorrect: 7, questionsTotal: 8, reframes: 0, timeSpent: '13 min', adaptedMode: 'Auditory + Paw Patrol' },
-      eli:   { score: 45, questionsCorrect: 5, questionsTotal: 11, reframes: 5, timeSpent: '35 min', adaptedMode: 'Tactile + Minecraft' },
+      eli:   { score: 45, questionsCorrect: 5, questionsTotal: 11, reframes: 5, timeSpent: '35 min', adaptedMode: 'Kinesthetic + Minecraft' },
       sofia: { score: 92, questionsCorrect: 11, questionsTotal: 12, reframes: 0, timeSpent: '9 min', adaptedMode: 'Reading + Encanto' },
     },
   },

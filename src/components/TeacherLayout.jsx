@@ -131,7 +131,7 @@ export default function TeacherLayout() {
             </span>
 
             {showClassMenu && (
-              <div style={{ ...dropdownStyle, right: 'auto', left: 0, minWidth: 220 }}>
+              <div style={{ ...dropdownStyle, right: 0, minWidth: 220, maxWidth: 'calc(100vw - 40px)' }}>
                 {classes.map((cls, idx) => (
                   <div
                     key={cls.id || idx}

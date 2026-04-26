@@ -277,19 +277,7 @@ export default function CuratedLesson() {
         </div>
       )}
 
-      {/* Mode switcher at bottom */}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 4 }}>
-        {['Visual', 'Auditory', 'Reading'].map(m => (
-          <button
-            key={m}
-            className={`btn btn-sm ${mode === m ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: 11, padding: '4px 12px' }}
-            onClick={() => { setMode(m); setSelected(null); setFeedback(null); }}
-          >
-            {MODE_META[m].label}
-          </button>
-        ))}
-      </div>
+      {/* Learning mode is set by the teacher — students cannot change it */}
 
     </div>
   );
