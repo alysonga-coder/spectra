@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { STUDENTS, ASSIGNMENTS, PUBLISHED_ASSIGNMENTS } from '../../lib/mockData';
 import { Alert, Badge, Avatar, ProgressBar } from '../../components/UI';
 import { adaptLesson, extractTextFromFile } from '../../lib/geminiClient';
@@ -23,6 +23,12 @@ export default function UploadAssignment() {
   const { saveLesson } = useLessonContext();
 
   const enrolledStudents = STUDENTS;
+
+  useEffect(() => {
+    if (!previewStudent && enrolledStudents.length > 0) {
+      setPreviewStudent(enrolledStudents[0].id);
+    }
+  }, []);
 
   const handleSubmit = async () => {
     setLoading(true);

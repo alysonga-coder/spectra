@@ -122,6 +122,10 @@ export default function StudentProfile() {
         setSaveError(true);
         setTimeout(() => setSaveError(false), 3000);
       }
+    } else {
+      setEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     }
   };
 
