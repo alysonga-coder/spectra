@@ -175,7 +175,7 @@ export default function TeacherSettings() {
               <div style={{
                 marginTop: 8,
                 fontSize: 13,
-                color: profileMsg.startsWith('Failed') ? '#991B1B' : 'var(--teal)',
+                color: profileMsg === 'Profile updated!' ? 'var(--teal)' : '#991B1B',
               }}>
                 {profileMsg}
               </div>
