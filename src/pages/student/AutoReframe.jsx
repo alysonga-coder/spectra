@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getStudent } from '../../lib/mockData';
 import { Alert } from '../../components/UI';
 import { generateReframe } from '../../lib/geminiClient';
 import { useAuth } from '../../lib/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-
-const STUDENT = getStudent('jamie');
 
 // Fallback content when Gemma is unavailable
 const FALLBACK = {
@@ -50,11 +47,11 @@ export default function AutoReframe() {
     setError(null);
 
     const profile = studentProfile || {
-      name: STUDENT.name,
-      grade: STUDENT.grade,
-      characters: STUDENT.characters,
-      learningStyles: STUDENT.learningStyles,
-      frustrationTriggers: STUDENT.frustrationTriggers,
+      name: userProfile?.name || 'Student',
+      grade: userProfile?.grade || '',
+      characters: userProfile?.characters || [],
+      learningStyles: userProfile?.learningStyles || ['Visual'],
+      frustrationTriggers: userProfile?.frustrationTriggers || [],
     };
 
     generateReframe(question, profile, wrongAttempts || 2)
@@ -103,7 +100,7 @@ export default function AutoReframe() {
             Let's try it a different way!
           </div>
           <div style={{ fontSize: 12, color: 'var(--purple-dark)', opacity: 0.8, marginTop: 2 }}>
-            {STUDENT.characters[0]} has a trick to make this easier.
+            {(userProfile?.characters || [])[0] || 'Your helper'} has a trick to make this easier.
           </div>
         </div>
       </div>
@@ -112,7 +109,7 @@ export default function AutoReframe() {
         <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
           <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
           <div style={{ color: 'var(--text-muted)' }}>
-            {STUDENT.characters[0]} is thinking of a simpler way to explain this...
+            {(userProfile?.characters || [])[0] || 'Your helper'} is thinking of a simpler way to explain this...
           </div>
         </div>
       )}
@@ -125,7 +122,7 @@ export default function AutoReframe() {
 
       {!loading && (
         <div className="card">
-          <div className="char-bubble">{STUDENT.characters[0]} is here to help! 💙</div>
+          <div className="char-bubble">{(userProfile?.characters || [])[0] || 'Your helper'} is here to help! 💙</div>
 
           {/* Visual scaffold */}
           <div style={{

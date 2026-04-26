@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getStudent } from '../../lib/mockData';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Alert } from '../../components/UI';
 import { useAuth } from '../../lib/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
-const STUDENT = getStudent('jamie');
-
 export default function CompletionScreen() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { userProfile } = useAuth();
   const [teacherName, setTeacherName] = useState('Your teacher');
+
+  const score = state?.score ?? 0;
+  const total = state?.total ?? 0;
+  const struggled = total > 0 && score < total;
+  const studentName = userProfile?.name?.split(' ')[0] || 'Student';
+  const character = (userProfile?.characters || [])[0] || '';
 
   useEffect(() => {
     if (!userProfile?.teacherUid) return;
@@ -19,10 +23,6 @@ export default function CompletionScreen() {
       .then(snap => { if (snap.exists()) setTeacherName(snap.data().name || 'Your teacher'); })
       .catch(() => {});
   }, [userProfile?.teacherUid]);
-
-  const score      = 4;
-  const total      = 5;
-  const struggled  = score < total;
 
   return (
     <div className="stack" style={{ gap: 14, textAlign: 'center' }}>
@@ -34,14 +34,16 @@ export default function CompletionScreen() {
           You did it!
         </div>
         <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
-          Great work today, {STUDENT.name.split(' ')[0]}!
+          Great work today, {studentName}!
         </div>
       </div>
 
       {/* Stars */}
-      <div style={{ fontSize: 32, letterSpacing: 6 }}>
-        {'★'.repeat(score)}{'☆'.repeat(total - score)}
-      </div>
+      {total > 0 && (
+        <div style={{ fontSize: 32, letterSpacing: 6 }}>
+          {'★'.repeat(score)}{'☆'.repeat(total - score)}
+        </div>
+      )}
 
       {/* Score summary */}
       <div className="card" style={{ textAlign: 'center' }}>
@@ -55,7 +57,7 @@ export default function CompletionScreen() {
       <Alert variant={struggled ? 'warn' : 'info'}>
         {struggled
           ? `Amazing effort today! Getting ${score} out of ${total} is something to be proud of. Keep it up! 💪`
-          : `Perfect run! You crushed it today. ${STUDENT.characters[0]} would be proud! ⭐`}
+          : `Perfect run! You crushed it today.${character ? ` ${character} would be proud!` : ''} ⭐`}
       </Alert>
 
       {/* Teacher data note */}

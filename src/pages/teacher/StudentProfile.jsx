@@ -1,24 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStudent, STUDENTS } from '../../lib/mockData';
 import { Avatar, Badge, ProgressBar, TlItem } from '../../components/UI';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const DEFAULT_STUDENT = {
+  id: '',
+  firestoreStudent: true,
+  name: 'Student',
+  initials: 'ST',
+  grade: '',
+  avatarColor: { bg: '#E6F1FB', text: '#042C53' },
+  learningStyles: [],
+  allStyles: ['Visual', 'Auditory', 'Reading', 'Kinesthetic'],
+  characters: [],
+  allCharacters: ['Bluey', 'Bingo', 'Paw Patrol', 'SpongeBob', 'Minecraft Steve', 'Mirabel (Encanto)'],
+  sensoryPrefs: [],
+  frustrationTriggers: [],
+  engagementPct: 0,
+  frustrationLevel: 'low',
+  frustrationScore: 0,
+  status: 'offline',
+  sessionActive: false,
+  frustrationHistory: [0, 0, 0, 0, 0, 0, 0],
+  currentAssignment: null,
+};
+
 export default function StudentProfile() {
   const { studentId } = useParams();
   const navigate      = useNavigate();
 
-  const isMockStudent = STUDENTS.some(s => s.id === studentId);
-  const mockStudent   = getStudent(studentId);
-
   const [firestoreData, setFirestoreData] = useState(null);
-  const [loading, setLoading] = useState(!isMockStudent);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isMockStudent) return;
     async function load() {
       try {
         const snap = await getDoc(doc(db, 'users', studentId));
@@ -53,9 +70,9 @@ export default function StudentProfile() {
       setLoading(false);
     }
     load();
-  }, [studentId, isMockStudent]);
+  }, [studentId]);
 
-  const student = isMockStudent ? mockStudent : (firestoreData || mockStudent);
+  const student = firestoreData || DEFAULT_STUDENT;
 
   const [selectedStyles,   setSelectedStyles]   = useState(student.learningStyles);
   const [selectedChars,    setSelectedChars]    = useState(student.characters);
@@ -78,7 +95,7 @@ export default function StudentProfile() {
   );
 
   const handleSave = async () => {
-    if (!isMockStudent && student.firestoreStudent) {
+    if (student.firestoreStudent) {
       try {
         await updateDoc(doc(db, 'users', studentId), {
           learningStyles: selectedStyles,

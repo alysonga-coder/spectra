@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
-import { STUDENTS, ASSIGNMENTS, PUBLISHED_ASSIGNMENTS } from '../../lib/mockData';
+import React, { useState, useEffect } from 'react';
+import { ASSIGNMENTS, PUBLISHED_ASSIGNMENTS } from '../../lib/mockData';
 import { Alert, Badge, Avatar, ProgressBar } from '../../components/UI';
 import { adaptLesson, extractTextFromFile } from '../../lib/geminiClient';
 import { useLessonContext } from '../../lib/LessonContext';
+import { useAuth } from '../../lib/AuthContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 const SUBJECTS = ['Math', 'Reading', 'Science', 'Social Skills', 'Writing'];
 
 export default function UploadAssignment() {
+  const { userProfile } = useAuth();
   const [subject, setSubject]     = useState('Math');
   const [content, setContent]     = useState(ASSIGNMENTS[0].rawContent);
   const [dueDate, setDueDate]     = useState('Apr 26, 2026');
@@ -15,11 +19,69 @@ export default function UploadAssignment() {
   const [loading, setLoading]     = useState(false);
   const [file, setFile]           = useState(null);
   const [adaptedVersions, setAdaptedVersions] = useState(null);
-  const [previewStudent, setPreviewStudent]   = useState('jamie');
+  const [previewStudent, setPreviewStudent]   = useState('');
   const [error, setError]         = useState(null);
   const [approved, setApproved]   = useState(false);
+  const [enrolledStudents, setEnrolledStudents] = useState([]);
+  const [submissions, setSubmissions] = useState({});
 
   const { saveLesson } = useLessonContext();
+
+  const classCodes = (userProfile?.classes || []).map(c => c.code).filter(Boolean);
+
+  // Fetch real enrolled students
+  useEffect(() => {
+    if (!classCodes.length) return;
+    async function fetchStudents() {
+      try {
+        const q = query(collection(db, 'users'), where('role', '==', 'student'), where('classCode', 'in', classCodes.slice(0, 10)));
+        const snap = await getDocs(q);
+        const students = snap.docs.map(d => {
+          const data = d.data();
+          const name = data.name || 'Student';
+          const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+          return {
+            id: d.id,
+            name,
+            initials,
+            grade: data.grade || '',
+            avatarColor: { bg: '#E6F1FB', text: '#042C53' },
+            learningStyles: data.learningStyles || [],
+            characters: data.characters || [],
+            frustrationTriggers: data.frustrationTriggers || [],
+          };
+        });
+        setEnrolledStudents(students);
+        if (students.length > 0 && !previewStudent) {
+          setPreviewStudent(students[0].id);
+        }
+      } catch (e) {
+        console.error('Failed to fetch enrolled students:', e);
+      }
+    }
+    fetchStudents();
+  }, [classCodes.join(',')]);
+
+  // Fetch submissions for all assignments
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+    async function fetchSubmissions() {
+      try {
+        const q = query(collection(db, 'submissions'), where('teacherUid', '==', userProfile.uid));
+        const snap = await getDocs(q);
+        const subs = {};
+        snap.forEach(d => {
+          const data = d.data();
+          const key = `${data.assignmentId}_${data.studentUid}`;
+          subs[key] = data;
+        });
+        setSubmissions(subs);
+      } catch (e) {
+        console.error('Failed to fetch submissions:', e);
+      }
+    }
+    fetchSubmissions();
+  }, [userProfile?.uid]);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -38,8 +100,8 @@ export default function UploadAssignment() {
       }
 
       const targetStudents = assignTo === 'all'
-        ? STUDENTS
-        : STUDENTS.filter(s => s.id === assignTo);
+        ? enrolledStudents
+        : enrolledStudents.filter(s => s.id === assignTo);
 
       const studentsPayload = targetStudents.map(s => ({
         id: s.id,
@@ -72,7 +134,26 @@ export default function UploadAssignment() {
   };
 
   const preview = adaptedVersions?.[previewStudent];
-  const previewStudentData = STUDENTS.find(s => s.id === previewStudent);
+  const previewStudentData = enrolledStudents.find(s => s.id === previewStudent);
+
+  // Build mock published assignments using real students
+  const publishedAssignments = PUBLISHED_ASSIGNMENTS.map(pa => {
+    const studentIds = enrolledStudents.map(s => s.id);
+    const studentStatus = {};
+    enrolledStudents.forEach(s => {
+      const sub = submissions[`${pa.id}_${s.id}`];
+      if (sub && sub.status === 'completed') {
+        const style = (s.learningStyles || ['Visual'])[0] || 'Visual';
+        const char = (s.characters || [])[0] || '';
+        studentStatus[s.id] = { status: 'completed', adaptedMode: `${style}${char ? ` + ${char} theme` : ''}` };
+      } else {
+        const style = (s.learningStyles || ['Visual'])[0] || 'Visual';
+        const char = (s.characters || [])[0] || '';
+        studentStatus[s.id] = { status: 'not-started', adaptedMode: `${style}${char ? ` + ${char} theme` : ''}` };
+      }
+    });
+    return { ...pa, assignedTo: studentIds, studentStatus };
+  });
 
   return (
     <div className="page">
@@ -141,8 +222,8 @@ export default function UploadAssignment() {
             <div>
               <label className="label">Assign to</label>
               <select className="select-input" value={assignTo} onChange={e => setAssignTo(e.target.value)}>
-                <option value="all">All students ({STUDENTS.length})</option>
-                {STUDENTS.map(s => <option key={s.id} value={s.id}>{s.name} only</option>)}
+                <option value="all">All students ({enrolledStudents.length})</option>
+                {enrolledStudents.map(s => <option key={s.id} value={s.id}>{s.name} only</option>)}
               </select>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -172,7 +253,7 @@ export default function UploadAssignment() {
                 onChange={e => setPreviewStudent(e.target.value)}
               >
                 {Object.keys(adaptedVersions).map(sid => {
-                  const s = STUDENTS.find(st => st.id === sid);
+                  const s = enrolledStudents.find(st => st.id === sid);
                   return <option key={sid} value={sid}>{s?.name || sid}</option>;
                 })}
               </select>
@@ -287,18 +368,22 @@ export default function UploadAssignment() {
           </div>
         </div>
 
-        {PUBLISHED_ASSIGNMENTS.length === 0 ? (
+        {enrolledStudents.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+            No students enrolled yet. Share your class code to get started.
+          </div>
+        ) : publishedAssignments.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
             No published assignments yet. Create and approve a lesson above to publish it.
           </div>
         ) : (
           <div className="stack" style={{ gap: 12 }}>
-            {PUBLISHED_ASSIGNMENTS.map(assignment => {
+            {publishedAssignments.map(assignment => {
               const completedCount = Object.values(assignment.studentStatus).filter(s => s.status === 'completed').length;
               const inProgressCount = Object.values(assignment.studentStatus).filter(s => s.status === 'in-progress').length;
               const notStartedCount = Object.values(assignment.studentStatus).filter(s => s.status === 'not-started').length;
               const totalCount = assignment.assignedTo.length;
-              const progressPct = Math.round((completedCount / totalCount) * 100);
+              const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
               return (
                 <div key={assignment.id} className="card">
@@ -327,7 +412,7 @@ export default function UploadAssignment() {
                   {/* Per-student status */}
                   <div style={{ borderTop: '0.5px solid var(--border)' }}>
                     {assignment.assignedTo.map(studentId => {
-                      const student = STUDENTS.find(s => s.id === studentId);
+                      const student = enrolledStudents.find(s => s.id === studentId);
                       const status = assignment.studentStatus[studentId];
                       if (!student || !status) return null;
 
