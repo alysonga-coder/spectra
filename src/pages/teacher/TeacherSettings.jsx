@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { Avatar } from '../../components/UI';
-import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { STUDENTS } from '../../lib/mockData';
 
 export default function TeacherSettings() {
   const { logout, userProfile, refreshProfile } = useAuth();
@@ -19,33 +20,16 @@ export default function TeacherSettings() {
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
 
-  // Student list (fetched from Firebase)
-  const [students, setStudents] = useState([]);
-  const classCodes = (userProfile?.classes || []).map(c => c.code).filter(Boolean);
-
-  useEffect(() => {
-    if (!classCodes.length) return;
-    async function fetchStudents() {
-      try {
-        const q = query(collection(db, 'users'), where('role', '==', 'student'), where('classCode', 'in', classCodes.slice(0, 10)));
-        const snap = await getDocs(q);
-        setStudents(snap.docs.map(d => {
-          const data = d.data();
-          const name = data.name || 'Student';
-          return {
-            id: d.id,
-            name,
-            initials: name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
-            grade: data.grade || '',
-            avatarColor: { bg: '#E6F1FB', text: '#042C53' },
-          };
-        }));
-      } catch (e) {
-        console.error('Failed to fetch enrolled students:', e);
-      }
-    }
-    fetchStudents();
-  }, [classCodes.join(',')]);
+  // Student list (seeded from mock data for demo)
+  const [students, setStudents] = useState(
+    STUDENTS.map(s => ({
+      id: s.id,
+      name: s.name,
+      initials: s.initials,
+      grade: s.grade,
+      avatarColor: s.avatarColor,
+    }))
+  );
 
   // Add student form state
   const [newName, setNewName] = useState('');
