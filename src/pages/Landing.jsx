@@ -35,7 +35,6 @@ export default function Landing() {
             width: 56, height: 56, borderRadius: '50%', background: 'var(--teal-light)',
             margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {/* Monitor icon */}
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dark)" strokeWidth="1.8">
               <rect x="2" y="3" width="20" height="14" rx="2"/>
               <path d="M8 21h8M12 17v4"/>
@@ -60,7 +59,6 @@ export default function Landing() {
             width: 56, height: 56, borderRadius: '50%', background: 'var(--purple-light)',
             margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {/* Person icon */}
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dark)" strokeWidth="1.8">
               <circle cx="12" cy="7" r="4"/>
               <path d="M3 21c0-4 4-7 9-7s9 3 9 7"/>
@@ -75,11 +73,27 @@ export default function Landing() {
 
       </div>
 
-      <div style={{ marginTop: 24, fontSize: 12, color: 'var(--text-muted)' }}>
-        Returning user?{' '}
-        <span style={{ color: 'var(--teal)', cursor: 'pointer' }} onClick={() => navigate('/teacher/login')}>
-          Log in here
-        </span>
+      {/* Create new account section */}
+      <div style={{
+        marginTop: 32, textAlign: 'center', padding: '24px 32px',
+        background: 'var(--surface)', borderRadius: 'var(--radius)',
+        border: '1px solid var(--border)', maxWidth: 600, width: '100%',
+      }}>
+        <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 12 }}>New to Spectra?</div>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/teacher/signup')}
+          >
+            Create teacher account
+          </button>
+          <button
+            className="btn btn-purple"
+            onClick={() => navigate('/student/signup')}
+          >
+            Create student account
+          </button>
+        </div>
       </div>
 
     </div>
