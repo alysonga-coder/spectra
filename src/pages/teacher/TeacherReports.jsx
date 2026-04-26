@@ -257,7 +257,10 @@ function QuestionsTab({ assignment, submissions, enrolledStudents }) {
 
 // ---------- Insights Tab ----------
 function InsightsTab({ assignment, enrolledStudents, submissions }) {
-  const studentSubs = enrolledStudents.map(s => submissions[`${assignment.id}_${s.id}`]).filter(s => s && s.status === 'completed');
+  const studentSubs = enrolledStudents.map(s => {
+    const sub = submissions[`${assignment.id}_${s.id}`];
+    return sub ? { ...sub, student: s } : null;
+  }).filter(s => s && s.status === 'completed');
 
   if (studentSubs.length === 0) {
     return (
@@ -275,25 +278,109 @@ function InsightsTab({ assignment, enrolledStudents, submissions }) {
   const totalReframes = studentSubs.reduce((sum, s) => sum + (s.reframes || 0), 0);
   const insights = [];
 
+  // --- Overall assignment insight ---
   if (avgScore < 60) {
-    insights.push({ type: 'warning', text: `**Average score is ${avgScore}%** — this assignment may be too difficult for the current class level. Consider simplifying or breaking it into smaller steps.` });
+    insights.push({ type: 'warning', text: `**Average score is ${avgScore}%** — this assignment may be too difficult for the current class level. Consider simplifying the content or breaking it into smaller, scaffolded steps before the next session.` });
   } else if (avgScore >= 85) {
-    insights.push({ type: 'positive', text: `**Great results!** Average score of ${avgScore}% shows strong understanding. Students are ready to move to more challenging material.` });
+    insights.push({ type: 'positive', text: `**Great results!** Average score of ${avgScore}% shows strong understanding across the class. Students are ready to move to more challenging material on this topic.` });
+  } else {
+    insights.push({ type: 'info', text: `**Class average: ${avgScore}%.** This is within the target range. Most students demonstrated solid comprehension with room for growth.` });
   }
 
+  // --- Frustration detector insights ---
   if (totalReframes > 0) {
-    insights.push({ type: 'amber', text: `**${totalReframes} AI reframe${totalReframes !== 1 ? 's' : ''} triggered** during this assignment. Review which students needed extra help and consider adjusting their learning profiles.` });
+    const studentsWithReframes = studentSubs.filter(s => (s.reframes || 0) > 0);
+    const reframedNames = studentsWithReframes.map(s => s.student.name).join(', ');
+    insights.push({ type: 'amber', text: `**Frustration detector triggered ${totalReframes} AI reframe${totalReframes !== 1 ? 's' : ''}** for ${studentsWithReframes.length} student${studentsWithReframes.length !== 1 ? 's' : ''} (${reframedNames}). The system detected signals like rapid clicks, repeated wrong answers, or "I don't understand" responses and automatically adapted the lesson content.` });
+  } else {
+    insights.push({ type: 'positive', text: `**Zero frustration signals detected.** No students triggered the frustration detector on this assignment — the difficulty level and pacing were well-calibrated for the class.` });
   }
 
+  // --- Per-student insights ---
+  const sorted = [...studentSubs].sort((a, b) => (b.score || 0) - (a.score || 0));
+  const topStudent = sorted[0];
+  const bottomStudent = sorted[sorted.length - 1];
+
+  // Top performer
+  if (topStudent && (topStudent.score || 0) >= 80) {
+    const style = (topStudent.student.learningStyles || [])[0] || 'their preferred';
+    insights.push({ type: 'positive', text: `**${topStudent.student.name} excelled with ${topStudent.score}%** using ${style} mode. ${(topStudent.reframes || 0) === 0 ? 'Completed without any AI intervention — ready for advanced material on this topic.' : 'Even with reframes, showed strong recovery and mastery.'}` });
+  }
+
+  // Struggling student
+  if (bottomStudent && (bottomStudent.score || 0) < 70 && bottomStudent !== topStudent) {
+    const triggers = (bottomStudent.student.frustrationTriggers || []).join(', ').toLowerCase();
+    const frustLevel = bottomStudent.student.frustrationLevel;
+    let advice = 'Consider a 1:1 check-in to discuss what felt challenging.';
+    if (frustLevel === 'high') {
+      advice = `This student's frustration level is currently **high** (score: ${bottomStudent.student.frustrationScore}/100). Recommend a 1:1 check-in before the next assignment. Known triggers: ${triggers || 'not yet identified'}.`;
+    } else if ((bottomStudent.reframes || 0) >= 2) {
+      advice = `Needed ${bottomStudent.reframes} reframes to get through the material. The AI adapted the content each time, but the student may benefit from pre-teaching key concepts before the next assignment.`;
+    }
+    insights.push({ type: 'amber', text: `**${bottomStudent.student.name} needs additional support (${bottomStudent.score}%).** ${advice}` });
+  }
+
+  // Students with high frustration levels (from their overall profile, not just this assignment)
   enrolledStudents.forEach(student => {
-    const sub = submissions[`${assignment.id}_${student.id}`];
-    if (sub && sub.status === 'completed' && (sub.score || 0) < 50) {
-      insights.push({ type: 'amber', text: `**${student.name} scored ${sub.score}%** on this assignment. Consider a 1:1 check-in or adjusting their learning style/difficulty.` });
+    if (student.frustrationLevel === 'high') {
+      const sub = submissions[`${assignment.id}_${student.id}`];
+      const alreadyMentioned = bottomStudent && bottomStudent.student.id === student.id;
+      if (!alreadyMentioned) {
+        const reframeCount = sub?.reframes || 0;
+        insights.push({ type: 'warning', text: `**Frustration alert: ${student.name}** has a frustration score of ${student.frustrationScore}/100 across recent sessions. ${reframeCount > 0 ? `Triggered ${reframeCount} reframe${reframeCount !== 1 ? 's' : ''} on this assignment.` : 'Did not trigger reframes here, but overall patterns suggest they need closer monitoring.'} Known triggers: ${(student.frustrationTriggers || []).join(', ') || 'unknown'}.` });
+      }
     }
   });
 
-  if (insights.length === 0) {
-    insights.push({ type: 'info', text: `**${studentSubs.length} student${studentSubs.length !== 1 ? 's' : ''} completed this assignment.** All results look healthy. Keep up the great work!` });
+  // Learning style comparison
+  const styleScores = {};
+  studentSubs.forEach(s => {
+    const style = (s.student.learningStyles || [])[0] || 'Unknown';
+    if (!styleScores[style]) styleScores[style] = [];
+    styleScores[style].push(s.score || 0);
+  });
+  const styleAvgs = Object.entries(styleScores).map(([style, scores]) => ({
+    style,
+    avg: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+  })).sort((a, b) => b.avg - a.avg);
+
+  if (styleAvgs.length >= 2) {
+    const best = styleAvgs[0];
+    const worst = styleAvgs[styleAvgs.length - 1];
+    const gap = best.avg - worst.avg;
+    if (gap >= 15) {
+      insights.push({ type: 'info', text: `**Learning style gap: ${best.style} learners averaged ${best.avg}% vs ${worst.style} learners at ${worst.avg}%** (${gap}pt difference). Consider adjusting the ${worst.style.toLowerCase()} mode content — it may need additional scaffolding, slower pacing, or supplementary materials to close this gap.` });
+    } else if (gap < 10) {
+      insights.push({ type: 'positive', text: `**All learning styles performed similarly** (${gap}pt spread). The adaptive content is working well across Visual, Auditory, Kinesthetic, and Reading modes.` });
+    }
+  }
+
+  // Mid-range students who might be overlooked
+  sorted.forEach(s => {
+    const score = s.score || 0;
+    if (score >= 60 && score < 75 && s !== topStudent && s !== bottomStudent) {
+      insights.push({ type: 'info', text: `**${s.student.name} scored ${score}%** — not struggling, but not thriving either. A small nudge could help: try adding their favorite character (${(s.student.characters || ['their preferred character'])[0]}) to more of the lesson content, or switch to a ${(s.student.learningStyles || ['different'])[0].toLowerCase()}-first approach.` });
+    }
+  });
+
+  // Recommendations section
+  const recommendations = [];
+  if (totalReframes > 2) {
+    recommendations.push('Review and simplify question wording for the next assignment on this topic');
+  }
+  if (bottomStudent && (bottomStudent.score || 0) < 60) {
+    recommendations.push(`Schedule a 1:1 check-in with ${bottomStudent.student.name} before the next similar assignment`);
+  }
+  enrolledStudents.forEach(student => {
+    if (student.frustrationLevel === 'high') {
+      recommendations.push(`Monitor ${student.name}'s frustration signals closely — consider reducing assignment length or adding more breaks`);
+    }
+  });
+  if (styleAvgs.length >= 2 && (styleAvgs[0].avg - styleAvgs[styleAvgs.length - 1].avg) >= 15) {
+    recommendations.push(`Enhance ${styleAvgs[styleAvgs.length - 1].style.toLowerCase()} mode content with additional support materials`);
+  }
+  if (topStudent && (topStudent.score || 0) >= 90) {
+    recommendations.push(`Consider giving ${topStudent.student.name} an extension activity or advanced version`);
   }
 
   const bgMap = { warning: 'var(--coral-light)', amber: 'var(--amber-light)', info: '#D9EEFA', positive: 'var(--green-light)' };
@@ -314,6 +401,23 @@ function InsightsTab({ assignment, enrolledStudents, submissions }) {
           <span dangerouslySetInnerHTML={{ __html: renderBoldMarkdown(insight.text) }} />
         </div>
       ))}
+
+      {recommendations.length > 0 && (
+        <>
+          <div className="card-title" style={{ marginTop: 12 }}>RECOMMENDATIONS</div>
+          <div style={{
+            padding: '16px 20px', borderRadius: 10,
+            background: 'var(--gray-light)', lineHeight: 1.8, fontSize: 13,
+          }}>
+            {recommendations.map((rec, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ color: 'var(--purple)', fontWeight: 600 }}>→</span>
+                <span>{rec}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
