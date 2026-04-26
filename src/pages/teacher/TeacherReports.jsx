@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { STUDENTS, REPORT_ASSIGNMENTS, REPORT_SUBJECT_META } from '../../lib/mockData';
 import { Avatar, Badge, ProgressBar } from '../../components/UI';
 
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderBoldMarkdown(text) {
+  const escaped = escapeHtml(text);
+  return escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+}
+
 const TABS = [
   { key: 'overview',    label: 'Overview' },
   { key: 'per-student', label: 'Per student' },
@@ -24,7 +33,6 @@ function groupBySubject(assignments) {
 function OverviewTab({ data }) {
   const { overview } = data;
   const maxStrategy = Math.max(...(overview.reframesByStrategy.map(s => s.count) || [1]), 1);
-  const flaggedQ = overview.heatmap.find(q => q.flagged);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -283,7 +291,7 @@ function InsightsTab({ data }) {
           color: colorMap[insight.type] || 'var(--text)',
         }}>
           <span style={{ marginRight: 8 }}>{iconMap[insight.type]}</span>
-          <span dangerouslySetInnerHTML={{ __html: insight.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+          <span dangerouslySetInnerHTML={{ __html: renderBoldMarkdown(insight.text) }} />
         </div>
       ))}
     </div>
@@ -414,7 +422,7 @@ export default function TeacherReports() {
                 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--purple)', flexShrink: 0, marginTop: 5 }} />
                   <div style={{ fontSize: 12 }} dangerouslySetInnerHTML={{
-                    __html: rec.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'),
+                    __html: renderBoldMarkdown(rec.text),
                   }} />
                 </div>
               ))}
