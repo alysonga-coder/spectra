@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { STUDENTS, statusBadgeClass, statusLabel } from '../../lib/mockData';
+import { STUDENTS, PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, statusBadgeClass, statusLabel } from '../../lib/mockData';
 import { StatCard, Alert, Avatar, StatusDot, Badge, ProgressBar } from '../../components/UI';
 
 export default function TeacherDashboard() {
@@ -104,6 +104,95 @@ export default function TeacherDashboard() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Current Assignments & Past Assignments bubbles */}
+      <div className="grid-2" style={{ gap: 16 }}>
+
+        {/* Current Assignments — bottom left */}
+        <div
+          className="card"
+          style={{ cursor: 'pointer', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+          onClick={() => navigate('/teacher/upload')}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--teal)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(29,158,117,0.12)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = ''; e.currentTarget.style.boxShadow = ''; }}
+        >
+          <div className="row" style={{ gap: 10, marginBottom: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'var(--teal-light)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: 16,
+            }}>
+              📋
+            </div>
+            <div>
+              <div style={{ fontWeight: 500, fontSize: 14 }}>Current Assignments</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {PUBLISHED_ASSIGNMENTS.length} active assignment{PUBLISHED_ASSIGNMENTS.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
+          {PUBLISHED_ASSIGNMENTS.slice(0, 2).map(a => {
+            const completedCount = Object.values(a.studentStatus).filter(s => s.status === 'completed').length;
+            const totalCount = a.assignedTo.length;
+            return (
+              <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '0.5px solid var(--border)', fontSize: 12 }}>
+                <div>
+                  <span style={{ fontWeight: 500 }}>{a.title}</span>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>Due {a.dueDate}</div>
+                </div>
+                <Badge variant="teal">{completedCount}/{totalCount}</Badge>
+              </div>
+            );
+          })}
+          <div style={{ fontSize: 11, color: 'var(--teal)', fontWeight: 500, marginTop: 8, textAlign: 'right' }}>
+            View all →
+          </div>
+        </div>
+
+        {/* Past Assignments — bottom right */}
+        <div
+          className="card"
+          style={{ cursor: 'pointer', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+          onClick={() => navigate('/teacher/reports')}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--purple)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(83,74,183,0.12)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = ''; e.currentTarget.style.boxShadow = ''; }}
+        >
+          <div className="row" style={{ gap: 10, marginBottom: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'var(--purple-light)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: 16,
+            }}>
+              📊
+            </div>
+            <div>
+              <div style={{ fontWeight: 500, fontSize: 14 }}>Past Assignments</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {PAST_ASSIGNMENTS.length} completed assignment{PAST_ASSIGNMENTS.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
+          {PAST_ASSIGNMENTS.slice(0, 2).map(a => {
+            const avgScore = Math.round(
+              Object.values(a.studentResults).reduce((sum, r) => sum + r.score, 0) /
+              Object.values(a.studentResults).length
+            );
+            return (
+              <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '0.5px solid var(--border)', fontSize: 12 }}>
+                <div>
+                  <span style={{ fontWeight: 500 }}>{a.title}</span>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>Completed {a.completedDate}</div>
+                </div>
+                <Badge variant={avgScore >= 80 ? 'teal' : avgScore >= 60 ? 'amber' : 'coral'}>Avg {avgScore}%</Badge>
+              </div>
+            );
+          })}
+          <div style={{ fontSize: 11, color: 'var(--purple)', fontWeight: 500, marginTop: 8, textAlign: 'right' }}>
+            View all →
+          </div>
+        </div>
+
       </div>
 
     </div>

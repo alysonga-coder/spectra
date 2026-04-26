@@ -150,6 +150,84 @@ Bluey takes 3 slices. Bingo takes 2 slices. How many slices do they have togethe
   },
 ];
 
+// Published assignments (actively assigned, with due dates and per-student info)
+export const PUBLISHED_ASSIGNMENTS = [
+  {
+    id: 'fractions',
+    subject: 'Math',
+    title: 'Fractions — adding with like denominators',
+    publishedDate: 'Apr 22, 2026',
+    dueDate: 'Apr 26, 2026',
+    assignedTo: ['jamie', 'maya', 'eli', 'sofia'],
+    studentStatus: {
+      jamie: { status: 'in-progress', adaptedMode: 'Visual + Bluey theme' },
+      maya:  { status: 'in-progress', adaptedMode: 'Auditory + Paw Patrol theme' },
+      eli:   { status: 'not-started', adaptedMode: 'Tactile + Minecraft theme' },
+      sofia: { status: 'completed',   adaptedMode: 'Reading + Encanto theme' },
+    },
+  },
+  {
+    id: 'community',
+    subject: 'Social Skills',
+    title: 'My community helpers',
+    publishedDate: 'Apr 24, 2026',
+    dueDate: 'Apr 28, 2026',
+    assignedTo: ['jamie', 'maya', 'eli', 'sofia'],
+    studentStatus: {
+      jamie: { status: 'not-started', adaptedMode: 'Visual + Bluey theme' },
+      maya:  { status: 'not-started', adaptedMode: 'Auditory + Paw Patrol theme' },
+      eli:   { status: 'not-started', adaptedMode: 'Tactile + Minecraft theme' },
+      sofia: { status: 'not-started', adaptedMode: 'Reading + Encanto theme' },
+    },
+  },
+];
+
+// Past assignments (completed/graded, with per-student results)
+export const PAST_ASSIGNMENTS = [
+  {
+    id: 'sightwords',
+    subject: 'Reading',
+    title: 'Sight words — set 4',
+    assignedDate: 'Apr 14, 2026',
+    dueDate: 'Apr 20, 2026',
+    completedDate: 'Apr 20, 2026',
+    studentResults: {
+      jamie: { score: 90, questionsCorrect: 9, questionsTotal: 10, reframes: 0, timeSpent: '12 min', adaptedMode: 'Visual + Bluey' },
+      maya:  { score: 75, questionsCorrect: 6, questionsTotal: 8, reframes: 1, timeSpent: '18 min', adaptedMode: 'Auditory + Paw Patrol' },
+      eli:   { score: 60, questionsCorrect: 6, questionsTotal: 10, reframes: 3, timeSpent: '25 min', adaptedMode: 'Tactile + Minecraft' },
+      sofia: { score: 95, questionsCorrect: 19, questionsTotal: 20, reframes: 0, timeSpent: '10 min', adaptedMode: 'Reading + Encanto' },
+    },
+  },
+  {
+    id: 'shapes',
+    subject: 'Math',
+    title: 'Identifying 2D shapes',
+    assignedDate: 'Apr 7, 2026',
+    dueDate: 'Apr 13, 2026',
+    completedDate: 'Apr 13, 2026',
+    studentResults: {
+      jamie: { score: 85, questionsCorrect: 17, questionsTotal: 20, reframes: 1, timeSpent: '14 min', adaptedMode: 'Visual + Bluey' },
+      maya:  { score: 70, questionsCorrect: 7, questionsTotal: 10, reframes: 2, timeSpent: '20 min', adaptedMode: 'Auditory + Paw Patrol' },
+      eli:   { score: 55, questionsCorrect: 11, questionsTotal: 20, reframes: 4, timeSpent: '30 min', adaptedMode: 'Tactile + Minecraft' },
+      sofia: { score: 100, questionsCorrect: 10, questionsTotal: 10, reframes: 0, timeSpent: '8 min', adaptedMode: 'Reading + Encanto' },
+    },
+  },
+  {
+    id: 'weather',
+    subject: 'Science',
+    title: 'Weather patterns & seasons',
+    assignedDate: 'Apr 1, 2026',
+    dueDate: 'Apr 6, 2026',
+    completedDate: 'Apr 6, 2026',
+    studentResults: {
+      jamie: { score: 82, questionsCorrect: 9, questionsTotal: 11, reframes: 1, timeSpent: '15 min', adaptedMode: 'Visual + Bluey' },
+      maya:  { score: 88, questionsCorrect: 7, questionsTotal: 8, reframes: 0, timeSpent: '13 min', adaptedMode: 'Auditory + Paw Patrol' },
+      eli:   { score: 45, questionsCorrect: 5, questionsTotal: 11, reframes: 5, timeSpent: '35 min', adaptedMode: 'Tactile + Minecraft' },
+      sofia: { score: 92, questionsCorrect: 11, questionsTotal: 12, reframes: 0, timeSpent: '9 min', adaptedMode: 'Reading + Encanto' },
+    },
+  },
+];
+
 // Frustration signal thresholds — used by the detection engine
 export const FRUSTRATION_CONFIG = {
   rapidClickWindow:     8,    // seconds

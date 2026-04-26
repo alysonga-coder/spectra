@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { STUDENTS, ASSIGNMENTS } from '../../lib/mockData';
-import { Alert } from '../../components/UI';
+import { STUDENTS, ASSIGNMENTS, PUBLISHED_ASSIGNMENTS } from '../../lib/mockData';
+import { Alert, Badge, Avatar, ProgressBar } from '../../components/UI';
 import { adaptLesson, extractTextFromFile } from '../../lib/geminiClient';
 import { useLessonContext } from '../../lib/LessonContext';
 
@@ -276,6 +276,89 @@ export default function UploadAssignment() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Published Assignments — tracking section */}
+      <div style={{ marginTop: 8 }}>
+        <div className="page-header" style={{ marginBottom: 0 }}>
+          <div>
+            <div className="page-title" style={{ fontSize: 16 }}>Published Assignments</div>
+            <div className="page-sub">Assignments that have been assigned to students</div>
+          </div>
+        </div>
+
+        {PUBLISHED_ASSIGNMENTS.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+            No published assignments yet. Create and approve a lesson above to publish it.
+          </div>
+        ) : (
+          <div className="stack" style={{ gap: 12 }}>
+            {PUBLISHED_ASSIGNMENTS.map(assignment => {
+              const completedCount = Object.values(assignment.studentStatus).filter(s => s.status === 'completed').length;
+              const inProgressCount = Object.values(assignment.studentStatus).filter(s => s.status === 'in-progress').length;
+              const notStartedCount = Object.values(assignment.studentStatus).filter(s => s.status === 'not-started').length;
+              const totalCount = assignment.assignedTo.length;
+              const progressPct = Math.round((completedCount / totalCount) * 100);
+
+              return (
+                <div key={assignment.id} className="card">
+                  <div className="row-between" style={{ marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 500, fontSize: 14 }}>{assignment.title}</div>
+                      <div className="row" style={{ gap: 6, marginTop: 4 }}>
+                        <Badge variant="blue">{assignment.subject}</Badge>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          Published {assignment.publishedDate} · Due {assignment.dueDate}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 12, fontWeight: 500 }}>{completedCount}/{totalCount} completed</div>
+                      <ProgressBar pct={progressPct} variant="teal" />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 10, fontSize: 11 }}>
+                    <Badge variant="teal">{completedCount} completed</Badge>
+                    <Badge variant="amber">{inProgressCount} in progress</Badge>
+                    <Badge variant="gray">{notStartedCount} not started</Badge>
+                  </div>
+
+                  {/* Per-student status */}
+                  <div style={{ borderTop: '0.5px solid var(--border)' }}>
+                    {assignment.assignedTo.map(studentId => {
+                      const student = STUDENTS.find(s => s.id === studentId);
+                      const status = assignment.studentStatus[studentId];
+                      if (!student || !status) return null;
+
+                      const statusVariant = status.status === 'completed' ? 'teal'
+                        : status.status === 'in-progress' ? 'amber' : 'gray';
+                      const statusText = status.status === 'completed' ? 'Completed'
+                        : status.status === 'in-progress' ? 'In Progress' : 'Not Started';
+
+                      return (
+                        <div key={studentId} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 4px', borderBottom: '0.5px solid var(--border)',
+                        }}>
+                          <Avatar
+                            initials={student.initials}
+                            bg={student.avatarColor.bg}
+                            color={student.avatarColor.text}
+                            size={28}
+                          />
+                          <span style={{ flex: 1, fontWeight: 500, fontSize: 13 }}>{student.name}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{status.adaptedMode}</span>
+                          <Badge variant={statusVariant}>{statusText}</Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
