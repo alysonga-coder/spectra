@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { STUDENTS, PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, TEACHER, statusBadgeClass, statusLabel } from '../../lib/mockData';
+import { PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, TEACHER, statusBadgeClass, statusLabel } from '../../lib/mockData';
 import { StatCard, Alert, Avatar, StatusDot, Badge, ProgressBar } from '../../components/UI';
 import { useAuth } from '../../lib/AuthContext';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -55,7 +55,7 @@ export default function TeacherDashboard() {
     fetchStudents();
   }, [classCodes.join(',')]);
 
-  const allStudents = [...enrolledStudents, ...STUDENTS];
+  const allStudents = enrolledStudents;
   const highFrustration = allStudents.filter(s => s.status === 'stress');
 
   return (
