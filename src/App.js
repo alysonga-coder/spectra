@@ -12,7 +12,7 @@ import TeacherSignup   from './pages/teacher/TeacherSignup';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import UploadAssignment from './pages/teacher/UploadAssignment';
 import StudentProfile   from './pages/teacher/StudentProfile';
-import LiveMonitor      from './pages/teacher/LiveMonitor';
+import TeacherSettings  from './pages/teacher/TeacherSettings';
 import TeacherReports   from './pages/teacher/TeacherReports';
 
 // Student pages
@@ -62,7 +62,7 @@ function AppRoutes() {
         <Route path="dashboard"         element={<TeacherDashboard />} />
         <Route path="upload"            element={<UploadAssignment />} />
         <Route path="profile/:studentId" element={<StudentProfile />} />
-        <Route path="monitor"           element={<LiveMonitor />} />
+        <Route path="settings"          element={<TeacherSettings />} />
         <Route path="reports"           element={<TeacherReports />} />
       </Route>
 
