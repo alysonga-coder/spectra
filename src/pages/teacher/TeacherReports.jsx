@@ -307,8 +307,10 @@ function InsightsTab({ assignment, enrolledStudents, submissions }) {
     insights.push({ type: 'positive', text: `**${topStudent.student.name} excelled with ${topStudent.score}%** using ${style} mode. ${(topStudent.reframes || 0) === 0 ? 'Completed without any AI intervention — ready for advanced material on this topic.' : 'Even with reframes, showed strong recovery and mastery.'}` });
   }
 
-  // Struggling student
-  if (bottomStudent && (bottomStudent.score || 0) < 70 && bottomStudent !== topStudent) {
+  // Struggling student (score < 70 can't overlap with top performer >= 80, so no duplicate risk)
+  let bottomMentioned = false;
+  if (bottomStudent && (bottomStudent.score || 0) < 70) {
+    bottomMentioned = true;
     const triggers = (bottomStudent.student.frustrationTriggers || []).join(', ').toLowerCase();
     const frustLevel = bottomStudent.student.frustrationLevel;
     let advice = 'Consider a 1:1 check-in to discuss what felt challenging.';
@@ -324,7 +326,7 @@ function InsightsTab({ assignment, enrolledStudents, submissions }) {
   enrolledStudents.forEach(student => {
     if (student.frustrationLevel === 'high') {
       const sub = submissions[`${assignment.id}_${student.id}`];
-      const alreadyMentioned = bottomStudent && bottomStudent.student.id === student.id;
+      const alreadyMentioned = bottomMentioned && bottomStudent && bottomStudent.student.id === student.id;
       if (!alreadyMentioned) {
         const reframeCount = sub?.reframes || 0;
         insights.push({ type: 'warning', text: `**Frustration alert: ${student.name}** has a frustration score of ${student.frustrationScore}/100 across recent sessions. ${reframeCount > 0 ? `Triggered ${reframeCount} reframe${reframeCount !== 1 ? 's' : ''} on this assignment.` : 'Did not trigger reframes here, but overall patterns suggest they need closer monitoring.'} Known triggers: ${(student.frustrationTriggers || []).join(', ') || 'unknown'}.` });
