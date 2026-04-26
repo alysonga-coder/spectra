@@ -9,7 +9,7 @@
 //    - idkClicks       ("I don't understand" button)
 //    - flaggedLanguage (keyword matches from chat input)
 //
-//  TODO: wire elevenLabs / Cloudinary reframe calls here.
+//  TODO: wire reframe calls here.
 // ============================================================
 
 import { useState, useRef, useCallback } from 'react';

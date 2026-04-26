@@ -51,7 +51,7 @@ export const STUDENTS = [
     initials: 'ER',
     grade: 'Grade 3',
     avatarColor: { bg: '#FAECE7', text: '#4A1B0C' },
-    learningStyles: ['Kinesthetic', 'Visual'],
+    learningStyles: ['Kinesthetic'],
     allStyles: ['Visual', 'Auditory', 'Reading', 'Kinesthetic'],
     characters: ['Minecraft Steve'],
     allCharacters: ['Bluey', 'Bingo', 'Paw Patrol', 'SpongeBob', 'Minecraft Steve', 'Mirabel (Encanto)'],
@@ -71,7 +71,7 @@ export const STUDENTS = [
     initials: 'SB',
     grade: 'Grade 3',
     avatarColor: { bg: '#EEEDFE', text: '#26215C' },
-    learningStyles: ['Reading', 'Visual'],
+    learningStyles: ['Reading'],
     allStyles: ['Visual', 'Auditory', 'Reading', 'Kinesthetic'],
     characters: ['Mirabel (Encanto)'],
     allCharacters: ['Bluey', 'Bingo', 'Paw Patrol', 'SpongeBob', 'Minecraft Steve', 'Mirabel (Encanto)'],
@@ -85,26 +85,7 @@ export const STUDENTS = [
     frustrationHistory: [15, 10, 20, 8, 12, 10, 5],
     currentAssignment: null,
   },
-  {
-    id: 'aisha',
-    name: 'Aisha R.',
-    initials: 'AR',
-    grade: 'Grade 3',
-    avatarColor: { bg: '#E6F1FB', text: '#042C53' },
-    learningStyles: ['Visual'],
-    allStyles: ['Visual', 'Auditory', 'Reading', 'Kinesthetic'],
-    characters: ['SpongeBob'],
-    allCharacters: ['Bluey', 'Bingo', 'Paw Patrol', 'SpongeBob', 'Minecraft Steve', 'Mirabel (Encanto)'],
-    sensoryPrefs: ['Color coding', 'Clear fonts'],
-    frustrationTriggers: ['Long passages'],
-    engagementPct: 72,
-    frustrationLevel: 'low',
-    frustrationScore: 18,
-    status: 'calm',
-    sessionActive: true,
-    frustrationHistory: [15, 20, 18, 22, 16, 18, 12],
-    currentAssignment: 'fractions',
-  },
+
 ];
 
 export const ASSIGNMENTS = [
@@ -125,8 +106,7 @@ Remember: when the bottom numbers are the same, just add the top numbers!`,
 Bluey takes 3 slices. Bingo takes 2 slices. How many slices do they have together?`,
         formula: '³⁄₈ + ²⁄₈ = ?',
         hint: 'Just add the top numbers! 3 + 2 = 5, so the answer is ⁵⁄₈.',
-        cloudinaryImage: 'https://res.cloudinary.com/demo/image/upload/sample.jpg', // replace with real Cloudinary URL
-        elevenLabsAudio: null, // replace with ElevenLabs audio URL
+
       },
     },
     questions: [
@@ -377,7 +357,7 @@ export const REFRAME_EVENTS = [
     timestamp: '9:14 AM',
     trigger: 'High frustration',
     before: 'Text mode — standard fractions lesson',
-    after: 'Minecraft visual mode — ElevenLabs narration enabled',
+    after: 'Minecraft visual mode — narration enabled',
     color: '#D85A30',
   },
   {
@@ -385,7 +365,7 @@ export const REFRAME_EVENTS = [
     timestamp: '9:08 AM',
     trigger: 'Moderate signals',
     before: 'Visual mode — Paw Patrol theme',
-    after: 'Added ElevenLabs audio narration layer',
+    after: 'Added audio narration layer',
     color: '#EF9F27',
   },
   {
@@ -422,12 +402,12 @@ export const REPORT_ASSIGNMENTS = [
     title: 'Addition (Q1–Q5)',
     date: 'Apr 24',
     dot: 'coral',
-    studentCount: 5,
+    studentCount: 4,
     questionCount: 5,
     totalReframes: 6,
     overview: {
-      avgScore: { value: 64, sub: 'across 5 students' },
-      completion: { value: '80%', sub: '4 of 5 finished' },
+      avgScore: { value: 64, sub: 'across 4 students' },
+      completion: { value: '75%', sub: '3 of 4 finished' },
       aiReframes: { value: 6, sub: '3 students triggered' },
       avgEngagement: { value: '74%', sub: '↑8% vs last assign' },
       scoreByStyle: [
@@ -454,7 +434,6 @@ export const REPORT_ASSIGNMENTS = [
       { studentId: 'sofia', mode: 'Auditory', score: 42, engagement: 58, reframes: 3, pattern: 'Spiral: Q3 fraction confusion' },
       { studentId: 'eli', mode: 'Visual', score: 68, engagement: 71, reframes: 2, pattern: 'Attention fade after Q2' },
       { studentId: 'jamie', mode: 'Visual', score: 90, engagement: 91, reframes: 0, pattern: 'None' },
-      { studentId: 'aisha', mode: 'Visual', score: 75, engagement: 79, reframes: 0, pattern: 'None' },
       { studentId: 'maya', mode: 'Auditory', score: 55, engagement: 66, reframes: 1, pattern: 'Concept confusion on Q4' },
     ],
     reframeLog: [
@@ -471,7 +450,7 @@ export const REPORT_ASSIGNMENTS = [
     ],
     insights: [
       { type: 'warning', text: '**Q3 needs to be removed or rewritten.** It introduced carrying which hasn\'t been taught. 3 of 5 students hit frustration threshold on this question alone. Before the next session replace it with a simpler two-digit addition without carrying.' },
-      { type: 'amber', text: '**Auditory learners scored 34% lower than visual learners** on this assignment. The ElevenLabs narration for math may need to be slower and include counting sounds. Consider adding audio cues like counting beeps alongside the narration.' },
+      { type: 'amber', text: '**Auditory learners scored 34% lower than visual learners** on this assignment. The narration for math may need to be slower and include counting sounds. Consider adding audio cues like counting beeps alongside the narration.' },
       { type: 'amber', text: '**Sofia J. has now struggled with addition across 2 consecutive assignments.** This is a pattern, not a one-off. Recommend a 1:1 check-in and consider dropping her back to single-digit addition before moving forward.' },
       { type: 'info', text: '**The SpongeBob and Minecraft themes drove the highest engagement scores** (Liam 91%, Marcus 71% after reframe). For the next math assignment consider applying character themes to auditory learners as well — currently only visual mode uses them.' },
       { type: 'positive', text: '**Q1 and Q2 are well calibrated.** 80–92% success with minimal reframes. Use the same question structure and difficulty level as a baseline for the next assignment\'s opening questions.' },
@@ -484,12 +463,12 @@ export const REPORT_ASSIGNMENTS = [
     title: 'Subtraction',
     date: 'Apr 18',
     dot: 'teal',
-    studentCount: 5,
+    studentCount: 4,
     questionCount: 4,
     totalReframes: 2,
     overview: {
-      avgScore: { value: 78, sub: 'across 5 students' },
-      completion: { value: '100%', sub: '5 of 5 finished' },
+      avgScore: { value: 78, sub: 'across 4 students' },
+      completion: { value: '100%', sub: '4 of 4 finished' },
       aiReframes: { value: 2, sub: '1 student triggered' },
       avgEngagement: { value: '81%', sub: '↑3% vs last assign' },
       scoreByStyle: [
@@ -515,7 +494,6 @@ export const REPORT_ASSIGNMENTS = [
       { studentId: 'maya', mode: 'Auditory', score: 65, engagement: 72, reframes: 2, pattern: 'Needed audio re-read on Q3' },
       { studentId: 'eli', mode: 'Visual', score: 72, engagement: 78, reframes: 0, pattern: 'None' },
       { studentId: 'sofia', mode: 'Reading', score: 85, engagement: 88, reframes: 0, pattern: 'None' },
-      { studentId: 'aisha', mode: 'Visual', score: 80, engagement: 82, reframes: 0, pattern: 'None' },
     ],
     reframeLog: [
       { studentId: 'maya', question: 'Q2', description: 'IDK pressed → auditory re-read with slower pacing', severity: 'Moderate' },
@@ -539,12 +517,12 @@ export const REPORT_ASSIGNMENTS = [
     title: 'Counting to 20',
     date: 'Apr 10',
     dot: 'teal',
-    studentCount: 5,
+    studentCount: 4,
     questionCount: 4,
     totalReframes: 0,
     overview: {
-      avgScore: { value: 92, sub: 'across 5 students' },
-      completion: { value: '100%', sub: '5 of 5 finished' },
+      avgScore: { value: 92, sub: 'across 4 students' },
+      completion: { value: '100%', sub: '4 of 4 finished' },
       aiReframes: { value: 0, sub: 'No reframes needed' },
       avgEngagement: { value: '88%', sub: '↑12% vs last assign' },
       scoreByStyle: [
@@ -567,7 +545,6 @@ export const REPORT_ASSIGNMENTS = [
       { studentId: 'maya', mode: 'Auditory', score: 88, engagement: 85, reframes: 0, pattern: 'None' },
       { studentId: 'eli', mode: 'Visual', score: 85, engagement: 82, reframes: 0, pattern: 'None' },
       { studentId: 'sofia', mode: 'Reading', score: 98, engagement: 92, reframes: 0, pattern: 'None' },
-      { studentId: 'aisha', mode: 'Visual', score: 94, engagement: 91, reframes: 0, pattern: 'None' },
     ],
     reframeLog: [],
     questions: [
@@ -587,12 +564,12 @@ export const REPORT_ASSIGNMENTS = [
     title: 'Animals story',
     date: 'Apr 23',
     dot: 'teal',
-    studentCount: 5,
+    studentCount: 4,
     questionCount: 5,
     totalReframes: 1,
     overview: {
-      avgScore: { value: 82, sub: 'across 5 students' },
-      completion: { value: '100%', sub: '5 of 5 finished' },
+      avgScore: { value: 82, sub: 'across 4 students' },
+      completion: { value: '100%', sub: '4 of 4 finished' },
       aiReframes: { value: 1, sub: '1 student triggered' },
       avgEngagement: { value: '79%', sub: '↑2% vs last assign' },
       scoreByStyle: [
@@ -618,7 +595,6 @@ export const REPORT_ASSIGNMENTS = [
       { studentId: 'maya', mode: 'Auditory', score: 85, engagement: 82, reframes: 0, pattern: 'None' },
       { studentId: 'eli', mode: 'Visual', score: 70, engagement: 68, reframes: 1, pattern: 'Vocabulary Q3 challenge' },
       { studentId: 'sofia', mode: 'Reading', score: 92, engagement: 88, reframes: 0, pattern: 'None' },
-      { studentId: 'aisha', mode: 'Visual', score: 83, engagement: 82, reframes: 0, pattern: 'None' },
     ],
     reframeLog: [
       { studentId: 'eli', question: 'Q3', description: 'Vocabulary word unfamiliar → text simplified, image hint added', severity: 'Mild' },
@@ -641,12 +617,12 @@ export const REPORT_ASSIGNMENTS = [
     title: 'Weather words',
     date: 'Apr 15',
     dot: 'teal',
-    studentCount: 5,
+    studentCount: 4,
     questionCount: 4,
     totalReframes: 2,
     overview: {
-      avgScore: { value: 76, sub: 'across 5 students' },
-      completion: { value: '100%', sub: '5 of 5 finished' },
+      avgScore: { value: 76, sub: 'across 4 students' },
+      completion: { value: '100%', sub: '4 of 4 finished' },
       aiReframes: { value: 2, sub: '2 students triggered' },
       avgEngagement: { value: '73%', sub: '' },
       scoreByStyle: [
@@ -672,7 +648,6 @@ export const REPORT_ASSIGNMENTS = [
       { studentId: 'maya', mode: 'Auditory', score: 68, engagement: 65, reframes: 1, pattern: 'Needed re-read on Q2' },
       { studentId: 'eli', mode: 'Visual', score: 62, engagement: 64, reframes: 1, pattern: 'Spelling challenge' },
       { studentId: 'sofia', mode: 'Reading', score: 88, engagement: 82, reframes: 0, pattern: 'None' },
-      { studentId: 'aisha', mode: 'Visual', score: 80, engagement: 76, reframes: 0, pattern: 'None' },
     ],
     reframeLog: [
       { studentId: 'maya', question: 'Q2', description: 'Audio re-read triggered after 2 wrong attempts', severity: 'Moderate' },
@@ -695,12 +670,12 @@ export const REPORT_ASSIGNMENTS = [
     title: 'Plants lifecycle',
     date: 'Apr 22',
     dot: 'amber',
-    studentCount: 5,
+    studentCount: 4,
     questionCount: 5,
     totalReframes: 4,
     overview: {
-      avgScore: { value: 68, sub: 'across 5 students' },
-      completion: { value: '80%', sub: '4 of 5 finished' },
+      avgScore: { value: 68, sub: 'across 4 students' },
+      completion: { value: '80%', sub: '3 of 4 finished' },
       aiReframes: { value: 4, sub: '2 students triggered' },
       avgEngagement: { value: '65%', sub: '↓5% vs last assign' },
       scoreByStyle: [
@@ -728,7 +703,6 @@ export const REPORT_ASSIGNMENTS = [
       { studentId: 'maya', mode: 'Auditory', score: 52, engagement: 55, reframes: 2, pattern: 'Vocabulary barrier' },
       { studentId: 'eli', mode: 'Visual', score: 58, engagement: 52, reframes: 2, pattern: 'Sequencing difficulty' },
       { studentId: 'sofia', mode: 'Reading', score: 82, engagement: 78, reframes: 0, pattern: 'None' },
-      { studentId: 'aisha', mode: 'Visual', score: 70, engagement: 68, reframes: 0, pattern: 'None' },
     ],
     reframeLog: [
       { studentId: 'maya', question: 'Q3', description: 'Vocabulary "germination" unfamiliar → simplified to "seed growing"', severity: 'Moderate' },
@@ -755,12 +729,12 @@ export const REPORT_ASSIGNMENTS = [
     title: 'Animal habitats',
     date: 'Apr 14',
     dot: 'teal',
-    studentCount: 5,
+    studentCount: 4,
     questionCount: 4,
     totalReframes: 1,
     overview: {
-      avgScore: { value: 84, sub: 'across 5 students' },
-      completion: { value: '100%', sub: '5 of 5 finished' },
+      avgScore: { value: 84, sub: 'across 4 students' },
+      completion: { value: '100%', sub: '4 of 4 finished' },
       aiReframes: { value: 1, sub: '1 student triggered' },
       avgEngagement: { value: '80%', sub: '↑4% vs last assign' },
       scoreByStyle: [
@@ -785,7 +759,6 @@ export const REPORT_ASSIGNMENTS = [
       { studentId: 'maya', mode: 'Auditory', score: 78, engagement: 75, reframes: 0, pattern: 'None' },
       { studentId: 'eli', mode: 'Visual', score: 72, engagement: 70, reframes: 1, pattern: 'Needed hint on Q3' },
       { studentId: 'sofia', mode: 'Reading', score: 92, engagement: 88, reframes: 0, pattern: 'None' },
-      { studentId: 'aisha', mode: 'Visual', score: 88, engagement: 82, reframes: 0, pattern: 'None' },
     ],
     reframeLog: [
       { studentId: 'eli', question: 'Q3', description: 'Hint provided: image of arctic habitat shown', severity: 'Mild' },
@@ -807,12 +780,12 @@ export const REPORT_ASSIGNMENTS = [
     title: 'Sharing & taking turns',
     date: 'Apr 20',
     dot: 'teal',
-    studentCount: 5,
+    studentCount: 4,
     questionCount: 4,
     totalReframes: 0,
     overview: {
-      avgScore: { value: 88, sub: 'across 5 students' },
-      completion: { value: '100%', sub: '5 of 5 finished' },
+      avgScore: { value: 88, sub: 'across 4 students' },
+      completion: { value: '100%', sub: '4 of 4 finished' },
       aiReframes: { value: 0, sub: 'No reframes needed' },
       avgEngagement: { value: '85%', sub: '↑6% vs last assign' },
       scoreByStyle: [
@@ -835,7 +808,6 @@ export const REPORT_ASSIGNMENTS = [
       { studentId: 'maya', mode: 'Auditory', score: 85, engagement: 82, reframes: 0, pattern: 'None' },
       { studentId: 'eli', mode: 'Visual', score: 80, engagement: 78, reframes: 0, pattern: 'None' },
       { studentId: 'sofia', mode: 'Reading', score: 95, engagement: 92, reframes: 0, pattern: 'None' },
-      { studentId: 'aisha', mode: 'Visual', score: 88, engagement: 85, reframes: 0, pattern: 'None' },
     ],
     reframeLog: [],
     questions: [

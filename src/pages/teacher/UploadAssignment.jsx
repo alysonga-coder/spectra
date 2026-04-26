@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { ASSIGNMENTS, PUBLISHED_ASSIGNMENTS } from '../../lib/mockData';
+import React, { useState } from 'react';
+import { STUDENTS, ASSIGNMENTS, PUBLISHED_ASSIGNMENTS } from '../../lib/mockData';
 import { Alert, Badge, Avatar, ProgressBar } from '../../components/UI';
 import { adaptLesson, extractTextFromFile } from '../../lib/geminiClient';
 import { useLessonContext } from '../../lib/LessonContext';
 import { useAuth } from '../../lib/AuthContext';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 
 const SUBJECTS = ['Math', 'Reading', 'Science', 'Social Skills', 'Writing'];
 
@@ -22,66 +20,9 @@ export default function UploadAssignment() {
   const [previewStudent, setPreviewStudent]   = useState('');
   const [error, setError]         = useState(null);
   const [approved, setApproved]   = useState(false);
-  const [enrolledStudents, setEnrolledStudents] = useState([]);
-  const [submissions, setSubmissions] = useState({});
-
   const { saveLesson } = useLessonContext();
 
-  const classCodes = (userProfile?.classes || []).map(c => c.code).filter(Boolean);
-
-  // Fetch real enrolled students
-  useEffect(() => {
-    if (!classCodes.length) return;
-    async function fetchStudents() {
-      try {
-        const q = query(collection(db, 'users'), where('role', '==', 'student'), where('classCode', 'in', classCodes.slice(0, 10)));
-        const snap = await getDocs(q);
-        const students = snap.docs.map(d => {
-          const data = d.data();
-          const name = data.name || 'Student';
-          const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-          return {
-            id: d.id,
-            name,
-            initials,
-            grade: data.grade || '',
-            avatarColor: { bg: '#E6F1FB', text: '#042C53' },
-            learningStyles: data.learningStyles || [],
-            characters: data.characters || [],
-            frustrationTriggers: data.frustrationTriggers || [],
-          };
-        });
-        setEnrolledStudents(students);
-        if (students.length > 0 && !previewStudent) {
-          setPreviewStudent(students[0].id);
-        }
-      } catch (e) {
-        console.error('Failed to fetch enrolled students:', e);
-      }
-    }
-    fetchStudents();
-  }, [classCodes.join(',')]);
-
-  // Fetch submissions for all assignments
-  useEffect(() => {
-    if (!userProfile?.uid) return;
-    async function fetchSubmissions() {
-      try {
-        const q = query(collection(db, 'submissions'), where('teacherUid', '==', userProfile.uid));
-        const snap = await getDocs(q);
-        const subs = {};
-        snap.forEach(d => {
-          const data = d.data();
-          const key = `${data.assignmentId}_${data.studentUid}`;
-          subs[key] = data;
-        });
-        setSubmissions(subs);
-      } catch (e) {
-        console.error('Failed to fetch submissions:', e);
-      }
-    }
-    fetchSubmissions();
-  }, [userProfile?.uid]);
+  const enrolledStudents = STUDENTS;
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -136,24 +77,7 @@ export default function UploadAssignment() {
   const preview = adaptedVersions?.[previewStudent];
   const previewStudentData = enrolledStudents.find(s => s.id === previewStudent);
 
-  // Build mock published assignments using real students
-  const publishedAssignments = PUBLISHED_ASSIGNMENTS.map(pa => {
-    const studentIds = enrolledStudents.map(s => s.id);
-    const studentStatus = {};
-    enrolledStudents.forEach(s => {
-      const sub = submissions[`${pa.id}_${s.id}`];
-      if (sub && sub.status === 'completed') {
-        const style = (s.learningStyles || ['Visual'])[0] || 'Visual';
-        const char = (s.characters || [])[0] || '';
-        studentStatus[s.id] = { status: 'completed', adaptedMode: `${style}${char ? ` + ${char} theme` : ''}` };
-      } else {
-        const style = (s.learningStyles || ['Visual'])[0] || 'Visual';
-        const char = (s.characters || [])[0] || '';
-        studentStatus[s.id] = { status: 'not-started', adaptedMode: `${style}${char ? ` + ${char} theme` : ''}` };
-      }
-    });
-    return { ...pa, assignedTo: studentIds, studentStatus };
-  });
+  const publishedAssignments = PUBLISHED_ASSIGNMENTS;
 
   return (
     <div className="page">
@@ -327,23 +251,6 @@ export default function UploadAssignment() {
             </div>
           )}
 
-          {/* Placeholder for Cloudinary image */}
-          <div style={{
-            marginTop: 12, background: 'var(--teal-light)', borderRadius: 'var(--radius-sm)',
-            padding: 12, fontSize: 12, color: 'var(--teal-dark)',
-          }}>
-            📷 Cloudinary — themed character image will load here
-            {preview?.cloudinaryPrompt && ` (${preview.cloudinaryPrompt})`}
-          </div>
-
-          {/* ElevenLabs audio */}
-          <div style={{
-            marginTop: 8, background: 'var(--blue-light)', borderRadius: 'var(--radius-sm)',
-            padding: 12, fontSize: 12, color: 'var(--blue-dark)',
-          }}>
-            🔊 ElevenLabs — narration audio will auto-play in auditory mode
-          </div>
-
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button className="btn btn-secondary btn-sm" onClick={handleSubmit} disabled={loading}>
               Regenerate
@@ -368,11 +275,7 @@ export default function UploadAssignment() {
           </div>
         </div>
 
-        {enrolledStudents.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-            No students enrolled yet. Share your class code to get started.
-          </div>
-        ) : publishedAssignments.length === 0 ? (
+        {publishedAssignments.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
             No published assignments yet. Create and approve a lesson above to publish it.
           </div>

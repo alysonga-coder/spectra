@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, REPORT_SUBJECT_META } from '../../lib/mockData';
+import React, { useState } from 'react';
+import { STUDENTS, PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, REPORT_SUBJECT_META } from '../../lib/mockData';
 import { Avatar, Badge, ProgressBar } from '../../components/UI';
-import { useAuth } from '../../lib/AuthContext';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 
 function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -322,70 +319,33 @@ function InsightsTab({ assignment, enrolledStudents, submissions }) {
 }
 
 // ---------- Main Reports Page ----------
+// Build fake submissions from PAST_ASSIGNMENTS for demo
+const MOCK_SUBMISSIONS = {};
+PAST_ASSIGNMENTS.forEach(pa => {
+  Object.entries(pa.studentResults || {}).forEach(([sid, result]) => {
+    MOCK_SUBMISSIONS[`${pa.id}_${sid}`] = {
+      assignmentId: pa.id,
+      studentUid: sid,
+      status: 'completed',
+      score: result.score,
+      questionsCorrect: result.questionsCorrect,
+      questionsTotal: result.questionsTotal,
+      reframes: result.reframes,
+    };
+  });
+});
+
 export default function TeacherReports() {
-  const { userProfile } = useAuth();
   const [selectedId, setSelectedId] = useState(ALL_REPORT_ITEMS[0]?.id);
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedSubjects, setExpandedSubjects] = useState(SUBJECT_ORDER);
-  const [enrolledStudents, setEnrolledStudents] = useState([]);
-  const [submissions, setSubmissions] = useState({});
 
-  const classCodes = (userProfile?.classes || []).map(c => c.code).filter(Boolean);
-
-  // Fetch real enrolled students
-  useEffect(() => {
-    if (!classCodes.length) return;
-    async function fetchStudents() {
-      try {
-        const q = query(collection(db, 'users'), where('role', '==', 'student'), where('classCode', 'in', classCodes.slice(0, 10)));
-        const snap = await getDocs(q);
-        const students = snap.docs.map(d => {
-          const data = d.data();
-          const name = data.name || 'Student';
-          const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-          return {
-            id: d.id,
-            name,
-            initials,
-            grade: data.grade || '',
-            avatarColor: { bg: '#E6F1FB', text: '#042C53' },
-            learningStyles: data.learningStyles || [],
-            characters: data.characters || [],
-          };
-        });
-        setEnrolledStudents(students);
-      } catch (e) {
-        console.error('Failed to fetch enrolled students:', e);
-      }
-    }
-    fetchStudents();
-  }, [classCodes.join(',')]);
-
-  // Fetch all submissions
-  useEffect(() => {
-    if (!userProfile?.uid) return;
-    async function fetchSubmissions() {
-      try {
-        const q = query(collection(db, 'submissions'), where('teacherUid', '==', userProfile.uid));
-        const snap = await getDocs(q);
-        const subs = {};
-        snap.forEach(d => {
-          const data = d.data();
-          const key = `${data.assignmentId}_${data.studentUid}`;
-          subs[key] = data;
-        });
-        setSubmissions(subs);
-      } catch (e) {
-        console.error('Failed to fetch submissions:', e);
-      }
-    }
-    fetchSubmissions();
-  }, [userProfile?.uid]);
+  const enrolledStudents = STUDENTS;
+  const submissions = MOCK_SUBMISSIONS;
 
   const selected = ALL_REPORT_ITEMS.find(a => a.id === selectedId) || ALL_REPORT_ITEMS[0];
   const grouped = groupBySubject(ALL_REPORT_ITEMS);
 
-  // Compute real student count and submission count for header
   const completedCount = enrolledStudents.filter(s => submissions[`${selected.id}_${s.id}`]?.status === 'completed').length;
   const totalReframes = enrolledStudents.reduce((sum, s) => {
     const sub = submissions[`${selected.id}_${s.id}`];

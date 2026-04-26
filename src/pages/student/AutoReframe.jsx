@@ -146,14 +146,6 @@ export default function AutoReframe() {
         <div className="card">
           <div className="char-bubble">{(userProfile?.characters || [])[0] || 'Your helper'} is here to help! 💙</div>
 
-          {/* Visual scaffold */}
-          <div style={{
-            background: 'var(--teal-light)', borderRadius: 'var(--radius-sm)',
-            padding: 12, fontSize: 12, color: 'var(--teal-dark)', marginBottom: 14,
-          }}>
-            📷 Cloudinary — step-by-step visual with pizza slices (simpler version)
-          </div>
-
           {/* Steps */}
           {steps.map((step, i) => (
             <div key={i} style={{ marginBottom: i < steps.length - 1 ? 10 : 14 }}>
@@ -202,14 +194,6 @@ export default function AutoReframe() {
       <Alert variant="info">
         {teacherName} has been quietly notified and may check in soon. Keep going — you're doing great!
       </Alert>
-
-      {/* ElevenLabs audio note */}
-      <div style={{
-        background: 'var(--blue-light)', borderRadius: 'var(--radius-sm)',
-        padding: 10, fontSize: 12, color: 'var(--blue-dark)',
-      }}>
-        🔊 ElevenLabs — reading the steps aloud now to support auditory processing
-      </div>
 
     </div>
   );

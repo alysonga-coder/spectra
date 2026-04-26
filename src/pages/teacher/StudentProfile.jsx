@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Avatar, Badge, ProgressBar, TlItem } from '../../components/UI';
+import { STUDENTS } from '../../lib/mockData';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
@@ -36,6 +37,13 @@ export default function StudentProfile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if this is a mock student first
+    const mockStudent = STUDENTS.find(s => s.id === studentId);
+    if (mockStudent) {
+      setFirestoreData(mockStudent);
+      setLoading(false);
+      return;
+    }
     async function load() {
       try {
         const snap = await getDoc(doc(db, 'users', studentId));
@@ -260,8 +268,7 @@ export default function StudentProfile() {
               </div>
               <p>
                 Fractions — {selectedStyles[0]?.toLowerCase() || 'visual'} mode.
-                Simplified to 1 concept per screen. Cloudinary images loaded.
-                ElevenLabs narration available on request.
+                Simplified to 1 concept per screen.
               </p>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>

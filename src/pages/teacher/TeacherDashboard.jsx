@@ -1,113 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, statusBadgeClass, statusLabel } from '../../lib/mockData';
+import { STUDENTS, PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, statusBadgeClass, statusLabel } from '../../lib/mockData';
 import { StatCard, Alert, Avatar, StatusDot, Badge, ProgressBar } from '../../components/UI';
 import { useAuth } from '../../lib/AuthContext';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
-  const [enrolledStudents, setEnrolledStudents] = useState([]);
-  const [submissions, setSubmissions] = useState({});
-
   const teacherName = userProfile?.name || 'Teacher';
   const teacherRoom = userProfile?.room || 'Classroom';
-  const classCodes = (userProfile?.classes || []).map(c => c.code).filter(Boolean);
 
-  useEffect(() => {
-    if (!classCodes.length) return;
-    async function fetchStudents() {
-      try {
-        const q = query(collection(db, 'users'), where('role', '==', 'student'), where('classCode', 'in', classCodes.slice(0, 10)));
-        const snap = await getDocs(q);
-        const enrolled = snap.docs.map(d => {
-          const data = d.data();
-          const name = data.name || 'Student';
-          const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-          return {
-            id: d.id,
-            firestoreStudent: true,
-            name,
-            initials,
-            grade: data.grade || '',
-            avatarColor: { bg: '#E6F1FB', text: '#042C53' },
-            learningStyles: data.learningStyles || [],
-            allStyles: ['Visual', 'Auditory', 'Reading', 'Kinesthetic'],
-            characters: data.characters || [],
-            allCharacters: ['Bluey', 'Bingo', 'Paw Patrol', 'SpongeBob', 'Minecraft Steve', 'Mirabel (Encanto)'],
-            sensoryPrefs: data.sensoryPrefs || [],
-            frustrationTriggers: data.frustrationTriggers || [],
-            engagementPct: 0,
-            frustrationLevel: 'low',
-            frustrationScore: 0,
-            status: 'offline',
-            sessionActive: false,
-            frustrationHistory: [0, 0, 0, 0, 0, 0, 0],
-            currentAssignment: null,
-          };
-        });
-        setEnrolledStudents(enrolled);
-      } catch (e) {
-        console.error('Failed to fetch enrolled students:', e);
-      }
-    }
-    fetchStudents();
-  }, [classCodes.join(',')]);
-
-  // Fetch submissions
-  useEffect(() => {
-    if (!userProfile?.uid) return;
-    async function fetchSubmissions() {
-      try {
-        const q = query(collection(db, 'submissions'), where('teacherUid', '==', userProfile.uid));
-        const snap = await getDocs(q);
-        const subs = {};
-        snap.forEach(d => {
-          const data = d.data();
-          const key = `${data.assignmentId}_${data.studentUid}`;
-          subs[key] = data;
-        });
-        setSubmissions(subs);
-      } catch (e) {
-        console.error('Failed to fetch submissions:', e);
-      }
-    }
-    fetchSubmissions();
-  }, [userProfile?.uid]);
-
-  const allStudents = enrolledStudents;
+  const allStudents = STUDENTS;
   const highFrustration = allStudents.filter(s => s.status === 'stress');
 
-  // Build current assignments with real student data
   const currentAssignments = PUBLISHED_ASSIGNMENTS.map(pa => {
-    const totalCount = allStudents.length;
-    let completedCount = 0;
-    allStudents.forEach(s => {
-      const sub = submissions[`${pa.id}_${s.id}`];
-      if (sub && sub.status === 'completed') completedCount++;
-    });
+    const totalCount = pa.assignedTo.length;
+    const completedCount = Object.values(pa.studentStatus).filter(s => s.status === 'completed').length;
     return { ...pa, completedCount, totalCount };
   });
 
-  // Build past assignments with real student data
   const pastAssignments = PAST_ASSIGNMENTS.map(pa => {
-    let totalScore = 0;
-    let scoredCount = 0;
-    allStudents.forEach(s => {
-      const sub = submissions[`${pa.id}_${s.id}`];
-      if (sub && sub.status === 'completed' && sub.score != null) {
-        totalScore += sub.score;
-        scoredCount++;
-      }
-    });
-    const avgScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : null;
-    return { ...pa, avgScore, scoredCount };
+    const results = Object.values(pa.studentResults || {});
+    const avgScore = results.length > 0 ? Math.round(results.reduce((sum, r) => sum + r.score, 0) / results.length) : null;
+    return { ...pa, avgScore, scoredCount: results.length };
   });
 
-  // Count total completed submissions
-  const totalCompleted = Object.values(submissions).filter(s => s.status === 'completed').length;
+  const totalCompleted = pastAssignments.reduce((sum, pa) => sum + (pa.scoredCount || 0), 0);
 
   return (
     <div className="page">
@@ -145,8 +63,8 @@ export default function TeacherDashboard() {
       <div className="grid-4">
         <StatCard label="Students"       value={allStudents.length} />
         <StatCard label="Lessons today"  value={PUBLISHED_ASSIGNMENTS.length} sub={`${totalCompleted} submission${totalCompleted !== 1 ? 's' : ''}`} />
-        <StatCard label="Avg engagement" value={allStudents.length > 0 ? '—' : '—'} valueColor="var(--purple)" />
-        <StatCard label="AI reframes"    value={0}  valueColor="var(--coral)" sub="today" />
+        <StatCard label="Avg engagement" value={`${Math.round(allStudents.reduce((s, st) => s + st.engagementPct, 0) / allStudents.length)}%`} valueColor="var(--purple)" />
+        <StatCard label="AI reframes"    value={3}  valueColor="var(--coral)" sub="today" />
       </div>
 
       {/* Student grid */}
