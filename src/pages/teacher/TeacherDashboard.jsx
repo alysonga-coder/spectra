@@ -1,12 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { STUDENTS, PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, statusBadgeClass, statusLabel } from '../../lib/mockData';
+import { STUDENTS, PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, TEACHER, statusBadgeClass, statusLabel } from '../../lib/mockData';
 import { StatCard, Alert, Avatar, StatusDot, Badge, ProgressBar } from '../../components/UI';
+import { useAuth } from '../../lib/AuthContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
+  const [enrolledStudents, setEnrolledStudents] = useState([]);
 
-  const highFrustration = STUDENTS.filter(s => s.status === 'stress');
+  const teacherName = userProfile?.name || TEACHER.name;
+  const teacherRoom = userProfile?.room || TEACHER.room;
+  const classCodes = (userProfile?.classes || []).map(c => c.code).filter(Boolean);
+
+  useEffect(() => {
+    if (!classCodes.length) return;
+    async function fetchStudents() {
+      try {
+        const q = query(collection(db, 'users'), where('role', '==', 'student'), where('classCode', 'in', classCodes.slice(0, 10)));
+        const snap = await getDocs(q);
+        const enrolled = snap.docs.map(d => {
+          const data = d.data();
+          const name = data.name || 'Student';
+          const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+          return {
+            id: d.id,
+            firestoreStudent: true,
+            name,
+            initials,
+            grade: data.grade || '',
+            avatarColor: { bg: '#E6F1FB', text: '#042C53' },
+            learningStyles: data.learningStyles || [],
+            allStyles: ['Visual', 'Auditory', 'Reading', 'Kinesthetic'],
+            characters: data.characters || [],
+            allCharacters: ['Bluey', 'Bingo', 'Paw Patrol', 'SpongeBob', 'Minecraft Steve', 'Mirabel (Encanto)'],
+            sensoryPrefs: data.sensoryPrefs || [],
+            frustrationTriggers: data.frustrationTriggers || [],
+            engagementPct: 0,
+            frustrationLevel: 'low',
+            frustrationScore: 0,
+            status: 'offline',
+            sessionActive: false,
+            frustrationHistory: [0, 0, 0, 0, 0, 0, 0],
+            currentAssignment: null,
+          };
+        });
+        setEnrolledStudents(enrolled);
+      } catch (e) {
+        console.error('Failed to fetch enrolled students:', e);
+      }
+    }
+    fetchStudents();
+  }, [classCodes.join(',')]);
+
+  const allStudents = [...enrolledStudents, ...STUDENTS];
+  const highFrustration = allStudents.filter(s => s.status === 'stress');
 
   return (
     <div className="page">
@@ -30,9 +80,9 @@ export default function TeacherDashboard() {
       {/* Header */}
       <div className="page-header">
         <div>
-          <div className="page-title">Room 4B — Ms. Rivera</div>
+          <div className="page-title">{teacherRoom} — {teacherName}</div>
           <div className="page-sub">
-            {STUDENTS.filter(s => s.sessionActive).length} active sessions · {STUDENTS.length} students total
+            {allStudents.filter(s => s.sessionActive).length} active sessions · {allStudents.length} students total
           </div>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/teacher/upload')}>
@@ -42,7 +92,7 @@ export default function TeacherDashboard() {
 
       {/* Stats row */}
       <div className="grid-4">
-        <StatCard label="Students"       value={STUDENTS.length} />
+        <StatCard label="Students"       value={allStudents.length} />
         <StatCard label="Lessons today"  value={3} sub="1 auto-adapted" />
         <StatCard label="Avg engagement" value="74%" valueColor="var(--purple)" />
         <StatCard label="AI reframes"    value={9}  valueColor="var(--coral)" sub="today" />
@@ -52,7 +102,7 @@ export default function TeacherDashboard() {
       <div>
         <div className="card-title" style={{ marginBottom: 10 }}>Students</div>
         <div className="grid-2">
-          {STUDENTS.map(student => (
+          {allStudents.map(student => (
             <div
               key={student.id}
               className="card"
