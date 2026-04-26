@@ -46,11 +46,14 @@ export default function CuratedLesson() {
   const wrongRef = useRef(0);
   const correctRef = useRef(0);
   const reframeCountRef = useRef(0);
+  const reframePendingRef = useRef(false);
 
   const question = questions[qIndex];
   const meta     = MODE_META[mode] || MODE_META.Visual;
 
   const onFrustrationTriggered = useCallback((score) => {
+    if (reframePendingRef.current) return;
+    reframePendingRef.current = true;
     reframeCountRef.current += 1;
     navigate('/student/reframe', {
       state: {
@@ -60,9 +63,12 @@ export default function CuratedLesson() {
         assignmentId,
         qIndex,
         studentId: studentProfile.id || 'student',
+        correctSoFar: correctRef.current,
+        totalQuestions: questions.length,
+        reframesSoFar: reframeCountRef.current,
       },
     });
-  }, [navigate, question, studentProfile, assignmentId, qIndex]);
+  }, [navigate, question, studentProfile, assignmentId, qIndex, questions.length]);
 
   const frustration = useFrustration({ onFrustrationTriggered });
 
@@ -95,11 +101,17 @@ export default function CuratedLesson() {
       if (showHint) setShowHintBox(true);
       setFeedback({ correct: false, text: showHint ? (question.hint || 'Try again!') : 'Not quite — try again!' });
       setSelected(null);
-      if (wrongRef.current >= 3) {
+      if (wrongRef.current >= 3 && !reframePendingRef.current) {
+        reframePendingRef.current = true;
         reframeCountRef.current += 1;
         setTimeout(() => {
           navigate('/student/reframe', {
-            state: { question, studentProfile, wrongAttempts: wrongRef.current, assignmentId, qIndex, studentId: studentProfile.id || 'student' },
+            state: {
+              question, studentProfile, wrongAttempts: wrongRef.current,
+              assignmentId, qIndex, studentId: studentProfile.id || 'student',
+              correctSoFar: correctRef.current, totalQuestions: questions.length,
+              reframesSoFar: reframeCountRef.current,
+            },
           });
         }, 1500);
       }
@@ -118,6 +130,7 @@ export default function CuratedLesson() {
       setFeedback(null);
       setShowHintBox(false);
       wrongRef.current = 0;
+      reframePendingRef.current = false;
       frustration.reset();
     } else {
       // Save submission and navigate to completion
