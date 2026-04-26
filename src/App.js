@@ -23,6 +23,7 @@ import SelectAssignment  from './pages/student/SelectAssignment';
 import CuratedLesson     from './pages/student/CuratedLesson';
 import AutoReframe       from './pages/student/AutoReframe';
 import CompletionScreen  from './pages/student/CompletionScreen';
+import StudentSettings   from './pages/student/StudentSettings';
 
 // Layout wrappers
 import TeacherLayout from './components/TeacherLayout';
@@ -78,6 +79,7 @@ function AppRoutes() {
         <Route path="lesson/:assignmentId" element={<CuratedLesson />} />
         <Route path="reframe"           element={<AutoReframe />} />
         <Route path="complete"          element={<CompletionScreen />} />
+        <Route path="settings"          element={<StudentSettings />} />
       </Route>
 
       {/* Fallback */}
