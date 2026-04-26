@@ -6,6 +6,7 @@ This skill covers end-to-end testing of the teacher-facing pages: Dashboard, Ass
 
 - Node.js installed (project uses React via Create React App)
 - Run `npm install` in the repo root
+- Firebase config in `src/lib/firebase.js` must have valid values (not placeholders). If the app shows `auth/api-key-not-valid` errors, the config needs to be updated.
 
 ## Starting the Dev Server
 
@@ -23,6 +24,8 @@ The app uses Firebase auth with a `RequireTeacher` guard in `src/App.js`. To byp
 1. In `src/App.js`, find the `RequireTeacher` function
 2. Add `return children;` as the first line of the function body
 3. **Always revert this change after testing** — do not commit it
+
+Alternatively, if Firebase config is valid, you can create a real test account via `/teacher/signup` and log in normally. This is preferred when testing auth-related changes.
 
 The teacher routes are:
 - `/teacher/dashboard` — Dashboard with student cards, assignments, past assignments
@@ -64,10 +67,10 @@ All data is in `src/lib/mockData.js`:
 
 ## Common Issues
 
-- If the page shows a blank screen or redirect, the auth bypass might not be applied correctly. Check the browser console for errors.
+- If the page shows a blank screen or redirect, check the browser console for errors. Common causes: Firebase config has placeholder values, or auth bypass not applied.
 - The dev server may take 10-20 seconds for initial compilation. Wait for the "Compiled successfully" message in the terminal.
 - Port 3000 might already be in use from a previous session. Check with `lsof -i :3000` and kill any existing processes.
 
 ## Devin Secrets Needed
 
-No secrets are required for testing — all data is mock data and auth is bypassed locally.
+No secrets are required for testing — all data is mock data. Auth can be bypassed locally or tested with real Firebase accounts if the config is valid.
