@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { TEACHER } from '../lib/mockData';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const NAV_ITEMS = [
@@ -67,6 +67,12 @@ export default function TeacherLayout() {
     if (userProfile?.uid) {
       try {
         await updateDoc(doc(db, 'users', userProfile.uid), { classes: updated });
+        await setDoc(doc(db, 'classCodes', code), {
+          teacherUid: userProfile.uid,
+          className: newClassName.trim(),
+          room: newClassRoom.trim(),
+          createdAt: new Date().toISOString(),
+        });
         await refreshProfile();
       } catch {
         setClassError('Failed to save class. Please try again.');

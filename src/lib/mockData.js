@@ -166,7 +166,115 @@ Bluey takes 3 slices. Bingo takes 2 slices. How many slices do they have togethe
     dueDate: 'Apr 28, 2026',
     status: 'new',
     rawContent: 'Learn about people who help us in our community.',
-    questions: [],
+    questions: [
+      { id: 'cq1', text: 'Who helps put out fires?', options: ['Teacher', 'Firefighter', 'Chef', 'Pilot'], correctIndex: 1, hint: 'Think about the person who drives a big red truck.' },
+    ],
+  },
+  {
+    id: 'addition-basic',
+    subject: 'Math',
+    title: 'Addition — Krabby Patty counting',
+    dueDate: 'Apr 30, 2026',
+    status: 'new',
+    character: 'SpongeBob',
+    rawContent: 'Practice basic addition by counting Krabby Patties with SpongeBob!',
+    questions: [
+      {
+        id: 'ab1',
+        text: '3 + 4 = ?',
+        options: [5, 7, 6, 8],
+        correctIndex: 1,
+        hint: 'Start by counting the first group. Then add the second group together.',
+        visual: {
+          characterSays: 'count with me!',
+          images: ['🍔🍔🍔', '🍔🍔🍔🍔'],
+          imageCaption: '3 patties + 4 patties = ?',
+        },
+        auditory: {
+          characterSays: 'listen carefully!',
+          narrationText: 'I have 3 patties. Patrick gives me 4 more. How many total?',
+        },
+        reading: {
+          fullText: 'SpongeBob has **3** Krabby Patties.\nPatrick gives him **4** more.\n\nHow many Krabby Patties does SpongeBob have in total?',
+        },
+      },
+      {
+        id: 'ab2',
+        text: '2 + 5 = ?',
+        options: [6, 8, 7, 5],
+        correctIndex: 2,
+        hint: 'Count two patties, then count five more after them.',
+        visual: {
+          characterSays: 'let\'s count together!',
+          images: ['🍔🍔', '🍔🍔🍔🍔🍔'],
+          imageCaption: '2 patties + 5 patties = ?',
+        },
+        auditory: {
+          characterSays: 'listen to the story!',
+          narrationText: 'SpongeBob made 2 patties in the morning and 5 more at lunch. How many did he make today?',
+        },
+        reading: {
+          fullText: 'SpongeBob made **2** Krabby Patties in the morning.\nThen he made **5** more at lunch.\n\nHow many Krabby Patties did SpongeBob make today?',
+        },
+      },
+      {
+        id: 'ab3',
+        text: '6 + 2 = ?',
+        options: [7, 9, 6, 8],
+        correctIndex: 3,
+        hint: 'You have 6 already. Just add 2 more to that number.',
+        visual: {
+          characterSays: 'look at the patties!',
+          images: ['🍔🍔🍔🍔🍔🍔', '🍔🍔'],
+          imageCaption: '6 patties + 2 patties = ?',
+        },
+        auditory: {
+          characterSays: 'listen up!',
+          narrationText: 'Patrick already has 6 patties on his plate. SpongeBob gives him 2 more. How many now?',
+        },
+        reading: {
+          fullText: 'Patrick has **6** Krabby Patties on his plate.\nSpongeBob gives him **2** more.\n\nHow many Krabby Patties does Patrick have now?',
+        },
+      },
+      {
+        id: 'ab4',
+        text: '4 + 3 = ?',
+        options: [8, 6, 5, 7],
+        correctIndex: 3,
+        hint: 'Start at 4 and count up 3 more: 5, 6, 7.',
+        visual: {
+          characterSays: 'count with me!',
+          images: ['🍔🍔🍔🍔', '🍔🍔🍔'],
+          imageCaption: '4 patties + 3 patties = ?',
+        },
+        auditory: {
+          characterSays: 'listen to this one!',
+          narrationText: 'There are 4 patties on the grill. SpongeBob adds 3 more. How many are cooking?',
+        },
+        reading: {
+          fullText: 'There are **4** Krabby Patties on the grill.\nSpongeBob adds **3** more.\n\nHow many Krabby Patties are cooking now?',
+        },
+      },
+      {
+        id: 'ab5',
+        text: '5 + 1 = ?',
+        options: [4, 7, 6, 5],
+        correctIndex: 2,
+        hint: 'You have 5. Adding 1 more makes it just one number higher.',
+        visual: {
+          characterSays: 'almost done!',
+          images: ['🍔🍔🍔🍔🍔', '🍔'],
+          imageCaption: '5 patties + 1 patty = ?',
+        },
+        auditory: {
+          characterSays: 'last one! listen!',
+          narrationText: 'Squidward ordered 5 patties but wants 1 more. How many patties total?',
+        },
+        reading: {
+          fullText: 'Squidward ordered **5** Krabby Patties.\nThen he asked for **1** more.\n\nHow many Krabby Patties did Squidward order in total?',
+        },
+      },
+    ],
   },
 ];
 
