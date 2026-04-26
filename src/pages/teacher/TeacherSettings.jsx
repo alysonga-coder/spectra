@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { TEACHER, STUDENTS } from '../../lib/mockData';
+import { useAuth } from '../../lib/AuthContext';
 import { Avatar } from '../../components/UI';
 
 export default function TeacherSettings() {
-  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   // Password form state
   const [currentPw, setCurrentPw] = useState('');
@@ -207,7 +207,7 @@ export default function TeacherSettings() {
 
         {/* ── Log Out card ── */}
         <div className="card">
-          <button className="btn btn-danger btn-full" onClick={() => navigate('/')}>
+          <button className="btn btn-danger btn-full" onClick={logout}>
             Log out
           </button>
         </div>
