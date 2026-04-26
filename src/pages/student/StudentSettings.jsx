@@ -99,6 +99,14 @@ export default function StudentSettings() {
       {/* Current class */}
       <div className="card">
         <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Your Class</div>
+        {leaveMsg && !currentCode && (
+          <div style={{
+            fontSize: 13, marginBottom: 8,
+            color: leaveMsg.startsWith('Failed') ? '#991B1B' : 'var(--teal)',
+          }}>
+            {leaveMsg}
+          </div>
+        )}
         {currentCode ? (
           <>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>
