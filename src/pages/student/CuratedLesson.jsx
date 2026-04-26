@@ -29,7 +29,7 @@ export default function CuratedLesson() {
   const studentProfile = userProfile || getStudent('jamie');
   const studentName    = (studentProfile.name || 'Student').split(' ')[0];
   const learningStyle  = (studentProfile.learningStyles || ['Visual'])[0] || 'Visual';
-  const character      = (studentProfile.characters || assignment.character ? [assignment.character || 'SpongeBob'] : ['SpongeBob'])[0];
+  const character      = (studentProfile.characters && studentProfile.characters.length > 0) ? studentProfile.characters[0] : (assignment.character || 'SpongeBob');
 
   const modeKey = learningStyle === 'Auditory' ? 'Auditory'
     : learningStyle === 'Reading' ? 'Reading' : 'Visual';
@@ -255,7 +255,7 @@ export default function CuratedLesson() {
             ))}
           </div>
 
-          {(showHintBox || question.reading) && question.hint && (
+          {showHintBox && question.hint && (
             <div style={{
               background: '#FFF8E7', border: '1px solid #F0DFA0', borderRadius: 8,
               padding: '12px 16px', marginBottom: 16,
