@@ -398,12 +398,12 @@ export const REFRAME_EVENTS = [
   },
 ];
 
-// Teacher info (static for now)
+// Teacher info (fallback when no Firebase profile is loaded)
 export const TEACHER = {
-  name: 'Ms. Rivera',
+  name: 'Teacher',
   room: 'Room 4B',
   school: 'Sunview Elementary',
-  email: 'mrivera@sunviewschool.edu',
+  email: '',
 };
 
 // Subject metadata for reports sidebar

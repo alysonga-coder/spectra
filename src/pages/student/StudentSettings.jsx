@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
-import { doc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteField, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
 export default function StudentSettings() {
@@ -24,15 +24,23 @@ export default function StudentSettings() {
         const snap = await getDoc(doc(db, 'classCodes', currentCode));
         if (snap.exists()) {
           setClassName(snap.data().className || snap.data().room || currentCode);
-        } else {
-          setClassName(currentCode);
+          return;
         }
+        // Fallback: look up teacher's classes array
+        if (userProfile?.teacherUid) {
+          const tSnap = await getDoc(doc(db, 'users', userProfile.teacherUid));
+          if (tSnap.exists()) {
+            const match = (tSnap.data().classes || []).find(c => c.code === currentCode || c.id === currentCode);
+            if (match) { setClassName(match.name || match.room || currentCode); return; }
+          }
+        }
+        setClassName(currentCode);
       } catch {
         setClassName(currentCode);
       }
     }
     fetchClassName();
-  }, [currentCode]);
+  }, [currentCode, userProfile?.teacherUid]);
 
   async function handleJoinClass(e) {
     e.preventDefault();
@@ -43,16 +51,46 @@ export default function StudentSettings() {
 
     setJoinBusy(true);
     try {
+      let teacherUid = '';
+      let cName = '';
+
+      // Primary lookup: classCodes collection
       const codeSnap = await getDoc(doc(db, 'classCodes', code));
-      if (!codeSnap.exists()) {
-        setJoinMsg('Invalid class code. Please check with your teacher.');
-        setJoinBusy(false);
-        return;
+      if (codeSnap.exists()) {
+        teacherUid = codeSnap.data().teacherUid || '';
+        cName = codeSnap.data().className || '';
+      } else {
+        // Fallback: search teacher users for matching class code
+        const q = query(collection(db, 'users'), where('role', '==', 'teacher'));
+        const snap = await getDocs(q);
+        let found = false;
+        snap.forEach(d => {
+          if (found) return;
+          const classes = d.data().classes || [];
+          const match = classes.find(c => c.code === code || c.id === code);
+          if (match) {
+            teacherUid = d.id;
+            cName = match.name || match.room || '';
+            found = true;
+            // Repair: create the missing classCodes document
+            setDoc(doc(db, 'classCodes', code), {
+              teacherUid: d.id,
+              className: match.name || '',
+              room: match.room || '',
+              createdAt: new Date().toISOString(),
+            }).catch(() => {});
+          }
+        });
+        if (!found) {
+          setJoinMsg('Invalid class code. Please check with your teacher.');
+          setJoinBusy(false);
+          return;
+        }
       }
-      const { teacherUid, className: cName } = codeSnap.data();
+
       await updateDoc(doc(db, 'users', userProfile.uid), {
         classCode: code,
-        teacherUid: teacherUid || '',
+        teacherUid: teacherUid,
       });
       await refreshProfile();
       setJoinCode('');

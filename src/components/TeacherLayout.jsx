@@ -211,6 +211,7 @@ export default function TeacherLayout() {
                 </div>
                 <div
                   style={menuItemStyle}
+                  onClick={() => { setShowProfileMenu(false); navigate('/teacher/settings'); }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >

@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { getStudent } from '../../lib/mockData';
 import { Alert } from '../../components/UI';
 import { generateReframe } from '../../lib/geminiClient';
+import { useAuth } from '../../lib/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 const STUDENT = getStudent('jamie');
 
@@ -24,11 +27,20 @@ export default function AutoReframe() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const { question, studentProfile, wrongAttempts, assignmentId, qIndex, studentId } = state || {};
+  const { userProfile } = useAuth();
 
   const [selected, setSelected]   = useState(null);
   const [reframeData, setReframeData] = useState(null);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState(null);
+  const [teacherName, setTeacherName] = useState('Your teacher');
+
+  useEffect(() => {
+    if (!userProfile?.teacherUid) return;
+    getDoc(doc(db, 'users', userProfile.teacherUid))
+      .then(snap => { if (snap.exists()) setTeacherName(snap.data().name || 'Your teacher'); })
+      .catch(() => {});
+  }, [userProfile?.teacherUid]);
 
   useEffect(() => {
     if (!question) return;
@@ -169,7 +181,7 @@ export default function AutoReframe() {
 
       {/* Teacher notification */}
       <Alert variant="info">
-        Ms. Rivera has been quietly notified and may check in soon. Keep going — you're doing great!
+        {teacherName} has been quietly notified and may check in soon. Keep going — you're doing great!
       </Alert>
 
       {/* ElevenLabs audio note */}
