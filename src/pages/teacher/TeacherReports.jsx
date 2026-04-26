@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { STUDENTS, REPORT_ASSIGNMENTS, REPORT_SUBJECT_META } from '../../lib/mockData';
+import React, { useState, useEffect } from 'react';
+import { PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, REPORT_SUBJECT_META } from '../../lib/mockData';
 import { Avatar, Badge, ProgressBar } from '../../components/UI';
+import { useAuth } from '../../lib/AuthContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -18,6 +21,26 @@ const TABS = [
   { key: 'insights',    label: 'Insights' },
 ];
 
+// Build a unified list of assignments for the reports sidebar from actual assignment data
+const ALL_REPORT_ITEMS = [
+  ...PUBLISHED_ASSIGNMENTS.map(a => ({
+    id: a.id,
+    subject: a.subject === 'Math' ? 'Mathematics' : a.subject,
+    title: a.title,
+    date: a.dueDate ? a.dueDate.replace(', 2026', '') : '',
+    dot: 'teal',
+    isCurrent: true,
+  })),
+  ...PAST_ASSIGNMENTS.map(a => ({
+    id: a.id,
+    subject: a.subject === 'Math' ? 'Mathematics' : a.subject,
+    title: a.title,
+    date: a.completedDate ? a.completedDate.replace(', 2026', '') : '',
+    dot: 'purple',
+    isCurrent: false,
+  })),
+];
+
 const SUBJECT_ORDER = ['Mathematics', 'Reading', 'Science', 'Social Skills'];
 
 function groupBySubject(assignments) {
@@ -30,19 +53,47 @@ function groupBySubject(assignments) {
 }
 
 // ---------- Overview Tab ----------
-function OverviewTab({ data }) {
-  const { overview } = data;
-  const maxStrategy = Math.max(...(overview.reframesByStrategy.map(s => s.count) || [1]), 1);
+function OverviewTab({ assignment, enrolledStudents, submissions }) {
+  const studentSubs = enrolledStudents.map(s => submissions[`${assignment.id}_${s.id}`]).filter(Boolean);
+  const completedSubs = studentSubs.filter(s => s.status === 'completed');
+  const totalStudents = enrolledStudents.length;
+  const completedCount = completedSubs.length;
+
+  if (completedCount === 0) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>📊</div>
+        <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>No results yet</div>
+        <div style={{ fontSize: 13 }}>
+          Results will appear here once students complete this assignment.
+          {totalStudents > 0 && ` ${totalStudents} student${totalStudents !== 1 ? 's' : ''} enrolled.`}
+        </div>
+      </div>
+    );
+  }
+
+  const avgScore = Math.round(completedSubs.reduce((sum, s) => sum + (s.score || 0), 0) / completedCount);
+  const completionPct = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
+  const totalReframes = completedSubs.reduce((sum, s) => sum + (s.reframes || 0), 0);
+
+  // Group scores by learning style
+  const styleScores = {};
+  completedSubs.forEach(sub => {
+    const student = enrolledStudents.find(s => s.id === sub.studentUid);
+    const style = (student?.learningStyles || ['Visual'])[0] || 'Visual';
+    if (!styleScores[style]) styleScores[style] = [];
+    styleScores[style].push(sub.score || 0);
+  });
+  const styleColors = { Visual: 'var(--purple)', Auditory: 'var(--teal)', Reading: 'var(--amber)', Kinesthetic: 'var(--blue)' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         {[
-          { label: 'AVG SCORE', value: `${overview.avgScore.value}%`, sub: overview.avgScore.sub, color: overview.avgScore.value >= 75 ? 'var(--teal)' : overview.avgScore.value >= 60 ? 'var(--amber)' : 'var(--coral)' },
-          { label: 'COMPLETION', value: overview.completion.value, sub: overview.completion.sub, color: 'var(--teal)' },
-          { label: 'AI REFRAMES', value: overview.aiReframes.value, sub: overview.aiReframes.sub, color: overview.aiReframes.value > 3 ? 'var(--coral)' : 'var(--text)' },
-          { label: 'AVG ENGAGEMENT', value: overview.avgEngagement.value, sub: overview.avgEngagement.sub, color: 'var(--teal)' },
+          { label: 'AVG SCORE', value: `${avgScore}%`, sub: `across ${completedCount} student${completedCount !== 1 ? 's' : ''}`, color: avgScore >= 75 ? 'var(--teal)' : avgScore >= 60 ? 'var(--amber)' : 'var(--coral)' },
+          { label: 'COMPLETION', value: `${completionPct}%`, sub: `${completedCount} of ${totalStudents} finished`, color: 'var(--teal)' },
+          { label: 'AI REFRAMES', value: totalReframes, sub: `${completedSubs.filter(s => (s.reframes || 0) > 0).length} student${completedSubs.filter(s => (s.reframes || 0) > 0).length !== 1 ? 's' : ''} triggered`, color: totalReframes > 3 ? 'var(--coral)' : 'var(--text)' },
+          { label: 'AVG QUESTIONS', value: completedSubs.length > 0 ? `${Math.round(completedSubs.reduce((sum, s) => sum + (s.questionsCorrect || 0), 0) / completedCount)}/${Math.round(completedSubs.reduce((sum, s) => sum + (s.questionsTotal || 0), 0) / completedCount)}` : '—', sub: 'correct per student', color: 'var(--teal)' },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '16px 20px' }}>
             <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{s.label}</div>
@@ -52,162 +103,19 @@ function OverviewTab({ data }) {
         ))}
       </div>
 
-      {/* Score by Learning Style + Reframes by Strategy */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      {Object.keys(styleScores).length > 0 && (
         <div className="card">
           <div className="card-title">SCORE BY LEARNING STYLE</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-            {overview.scoreByStyle.map(s => (
-              <div key={s.style} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ width: 60, fontSize: 12, textAlign: 'right' }}>{s.style}</span>
-                <div style={{ flex: 1, height: 12, background: 'var(--gray-light)', borderRadius: 6, overflow: 'hidden' }}>
-                  <div style={{ width: `${s.pct}%`, height: '100%', background: s.color, borderRadius: 6 }} />
-                </div>
-                <span style={{ width: 35, fontSize: 12, fontWeight: 500 }}>{s.pct}%</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>{overview.styleInsight}</div>
-        </div>
-
-        <div className="card">
-          <div className="card-title">REFRAMES BY STRATEGY</div>
-          {overview.reframesByStrategy.length > 0 ? (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-                {overview.reframesByStrategy.map(s => (
-                  <div key={s.strategy} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ width: 80, fontSize: 12, textAlign: 'right' }}>{s.strategy}</span>
-                    <div style={{ flex: 1, height: 12, background: 'var(--gray-light)', borderRadius: 6, overflow: 'hidden' }}>
-                      <div style={{ width: `${(s.count / maxStrategy) * 100}%`, height: '100%', background: s.color, borderRadius: 6 }} />
-                    </div>
-                    <span style={{ width: 20, fontSize: 12, fontWeight: 500 }}>{s.count}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>{overview.strategyInsight}</div>
-            </>
-          ) : (
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{overview.strategyInsight}</div>
-          )}
-        </div>
-      </div>
-
-      {/* Question Difficulty Heatmap */}
-      <div className="card">
-        <div className="card-title">QUESTION DIFFICULTY HEATMAP</div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {overview.heatmap.map(q => {
-            const borderColor = q.flagged ? 'var(--coral)' : q.pct >= 80 ? 'var(--teal)' : q.pct >= 60 ? 'var(--amber)' : 'var(--coral)';
-            const textColor = q.pct >= 80 ? 'var(--teal)' : q.pct >= 60 ? 'var(--amber)' : 'var(--coral)';
-            return (
-              <div key={q.label} style={{
-                flex: 1, border: `1.5px solid ${borderColor}`, borderRadius: 10,
-                padding: '12px 8px', textAlign: 'center',
-                background: q.flagged ? 'var(--coral-light)' : 'transparent',
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>{q.label}</div>
-                <div style={{ fontSize: 22, fontWeight: 600, color: textColor }}>{q.pct}%</div>
-                <div style={{ fontSize: 11, color: q.reframes > 0 ? textColor : 'var(--text-muted)', marginTop: 2 }}>
-                  {q.reframes} reframe{q.reframes !== 1 ? 's' : ''}{q.flagged ? ' ⚠' : ''}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------- Per Student Tab ----------
-function PerStudentTab({ data }) {
-  const maxReframes = Math.max(...data.students.map(s => s.reframes), 1);
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Student performance table */}
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div className="card-title" style={{ marginBottom: 0 }}>INDIVIDUAL STUDENT PERFORMANCE</div>
-          <Badge variant="gray">{data.studentCount} students</Badge>
-        </div>
-
-        {/* Table header */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '160px 80px 120px 120px 80px 1fr',
-          gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border)',
-          fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4,
-        }}>
-          <div>Student</div>
-          <div>Mode</div>
-          <div>Score</div>
-          <div>Engagement</div>
-          <div>Reframes</div>
-          <div>Pattern detected</div>
-        </div>
-
-        {/* Student rows */}
-        {data.students.map(row => {
-          const student = STUDENTS.find(s => s.id === row.studentId);
-          if (!student) return null;
-          const scoreColor = row.score >= 80 ? 'teal' : row.score >= 60 ? 'amber' : 'coral';
-          const engColor = row.engagement >= 80 ? 'teal' : row.engagement >= 60 ? 'amber' : 'coral';
-
-          return (
-            <div key={row.studentId} style={{
-              display: 'grid', gridTemplateColumns: '160px 80px 120px 120px 80px 1fr',
-              gap: 8, padding: '12px 0', borderBottom: '0.5px solid var(--border)', alignItems: 'center',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Avatar initials={student.initials} bg={student.avatarColor.bg} color={student.avatarColor.text} size={28} />
-                <span style={{ fontSize: 13, fontWeight: 500 }}>{student.name}</span>
-              </div>
-              <div><Badge variant={row.mode === 'Auditory' ? 'amber' : row.mode === 'Reading' ? 'purple' : 'blue'}>{row.mode}</Badge></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ProgressBar pct={row.score} variant={scoreColor} />
-                <span style={{ fontSize: 12, fontWeight: 500, minWidth: 32 }}>{row.score}%</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ProgressBar pct={row.engagement} variant={engColor} />
-                <span style={{ fontSize: 12, fontWeight: 500, minWidth: 32 }}>{row.engagement}%</span>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 28, height: 28, borderRadius: '50%', fontSize: 12, fontWeight: 500,
-                  background: row.reframes > 0 ? (row.reframes >= 3 ? 'var(--coral-light)' : 'var(--amber-light)') : 'var(--teal-light)',
-                  color: row.reframes > 0 ? (row.reframes >= 3 ? 'var(--coral-dark)' : 'var(--amber-dark)') : 'var(--teal-dark)',
-                }}>{row.reframes}</span>
-              </div>
-              <div style={{ fontSize: 12, color: row.pattern === 'None' ? 'var(--text-muted)' : 'var(--text)' }}>{row.pattern}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* AI Reframe Log */}
-      {data.reframeLog.length > 0 && (
-        <div className="card">
-          <div className="card-title">AI REFRAME LOG — PER STUDENT</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.reframeLog.map((entry, i) => {
-              const student = STUDENTS.find(s => s.id === entry.studentId);
-              const sevBg = entry.severity === 'High' ? 'var(--coral-light)' : entry.severity === 'Moderate' ? 'var(--amber-light)' : 'var(--gray-light)';
-              const sevColor = entry.severity === 'High' ? 'var(--coral-dark)' : entry.severity === 'Moderate' ? 'var(--amber-dark)' : 'var(--gray-dark)';
-
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Object.entries(styleScores).map(([style, scores]) => {
+              const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
               return (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 16,
-                  padding: '12px 16px', background: sevBg, borderRadius: 8,
-                }}>
-                  <span style={{ fontWeight: 500, fontSize: 13, minWidth: 60 }}>{student?.name?.split(' ')[0] || 'Unknown'}</span>
-                  <span style={{ fontSize: 12, flex: 1, lineHeight: 1.5 }}>
-                    {entry.question} · {entry.description}
-                  </span>
-                  <Badge variant={entry.severity === 'High' ? 'coral' : entry.severity === 'Moderate' ? 'amber' : 'gray'}>
-                    {entry.severity}
-                  </Badge>
+                <div key={style} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ width: 80, fontSize: 12, textAlign: 'right' }}>{style}</span>
+                  <div style={{ flex: 1, height: 12, background: 'var(--gray-light)', borderRadius: 6, overflow: 'hidden' }}>
+                    <div style={{ width: `${avg}%`, height: '100%', background: styleColors[style] || 'var(--purple)', borderRadius: 6 }} />
+                  </div>
+                  <span style={{ width: 35, fontSize: 12, fontWeight: 500 }}>{avg}%</span>
                 </div>
               );
             })}
@@ -218,72 +126,187 @@ function PerStudentTab({ data }) {
   );
 }
 
+// ---------- Per Student Tab ----------
+function PerStudentTab({ assignment, enrolledStudents, submissions }) {
+  if (enrolledStudents.length === 0) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+        No students enrolled yet.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div className="card-title" style={{ marginBottom: 0 }}>INDIVIDUAL STUDENT PERFORMANCE</div>
+          <Badge variant="gray">{enrolledStudents.length} students</Badge>
+        </div>
+
+        <div style={{
+          display: 'grid', gridTemplateColumns: '180px 80px 120px 80px 80px 1fr',
+          gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border)',
+          fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4,
+        }}>
+          <div>Student</div>
+          <div>Mode</div>
+          <div>Score</div>
+          <div>Correct</div>
+          <div>Reframes</div>
+          <div>Status</div>
+        </div>
+
+        {enrolledStudents.map(student => {
+          const sub = submissions[`${assignment.id}_${student.id}`];
+          const style = (student.learningStyles || ['Visual'])[0] || 'Visual';
+
+          if (!sub || sub.status !== 'completed') {
+            return (
+              <div key={student.id} style={{
+                display: 'grid', gridTemplateColumns: '180px 80px 120px 80px 80px 1fr',
+                gap: 8, padding: '12px 0', borderBottom: '0.5px solid var(--border)', alignItems: 'center',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Avatar initials={student.initials} bg={student.avatarColor.bg} color={student.avatarColor.text} size={28} />
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>{student.name}</span>
+                </div>
+                <div><Badge variant="blue">{style}</Badge></div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</div>
+                <div><Badge variant="gray">Not completed</Badge></div>
+              </div>
+            );
+          }
+
+          const score = sub.score || 0;
+          const scoreColor = score >= 80 ? 'teal' : score >= 60 ? 'amber' : 'coral';
+
+          return (
+            <div key={student.id} style={{
+              display: 'grid', gridTemplateColumns: '180px 80px 120px 80px 80px 1fr',
+              gap: 8, padding: '12px 0', borderBottom: '0.5px solid var(--border)', alignItems: 'center',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Avatar initials={student.initials} bg={student.avatarColor.bg} color={student.avatarColor.text} size={28} />
+                <span style={{ fontSize: 13, fontWeight: 500 }}>{student.name}</span>
+              </div>
+              <div><Badge variant={style === 'Auditory' ? 'amber' : style === 'Reading' ? 'purple' : 'blue'}>{style}</Badge></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ProgressBar pct={score} variant={scoreColor} />
+                <span style={{ fontSize: 12, fontWeight: 500, minWidth: 32 }}>{score}%</span>
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 500 }}>{sub.questionsCorrect || 0}/{sub.questionsTotal || 0}</div>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 28, height: 28, borderRadius: '50%', fontSize: 12, fontWeight: 500,
+                  background: (sub.reframes || 0) > 0 ? ((sub.reframes || 0) >= 3 ? 'var(--coral-light)' : 'var(--amber-light)') : 'var(--teal-light)',
+                  color: (sub.reframes || 0) > 0 ? ((sub.reframes || 0) >= 3 ? 'var(--coral-dark)' : 'var(--amber-dark)') : 'var(--teal-dark)',
+                }}>{sub.reframes || 0}</span>
+              </div>
+              <div><Badge variant="teal">Completed</Badge></div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ---------- Questions Tab ----------
-function QuestionsTab({ data }) {
-  const flaggedQs = data.questions.filter(q => q.flagged);
-  const flaggedLabel = flaggedQs.length > 0
-    ? flaggedQs.map(q => q.label).join(', ') + ' flagged'
-    : null;
+function QuestionsTab({ assignment, submissions, enrolledStudents }) {
+  const studentSubs = enrolledStudents.map(s => submissions[`${assignment.id}_${s.id}`]).filter(s => s && s.status === 'completed');
+
+  if (studentSubs.length === 0) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>📝</div>
+        <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>No question data yet</div>
+        <div style={{ fontSize: 13 }}>
+          Detailed question analysis will appear once students complete this assignment.
+        </div>
+      </div>
+    );
+  }
+
+  const avgCorrect = Math.round(studentSubs.reduce((sum, s) => sum + (s.questionsCorrect || 0), 0) / studentSubs.length);
+  const avgTotal = Math.round(studentSubs.reduce((sum, s) => sum + (s.questionsTotal || 0), 0) / studentSubs.length);
+  const avgPct = avgTotal > 0 ? Math.round((avgCorrect / avgTotal) * 100) : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="card-title" style={{ marginBottom: 0 }}>PER-QUESTION BREAKDOWN</div>
-        {flaggedLabel && <Badge variant="coral">{flaggedLabel}</Badge>}
-      </div>
-
-      {data.questions.map(q => {
-        const successColor = q.successPct >= 80 ? 'var(--teal)' : q.successPct >= 60 ? 'var(--amber)' : 'var(--coral)';
-        return (
-          <div key={q.label} className="card" style={{
-            border: q.flagged ? '1.5px solid var(--coral)' : undefined,
-            background: q.flagged ? 'var(--coral-light)' : undefined,
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: q.flagged ? 'var(--coral-dark)' : 'var(--text)' }}>
-                {q.flagged && '⚠ '}{q.label} — {q.text}
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Badge variant={q.successPct >= 80 ? 'teal' : q.successPct >= 60 ? 'amber' : 'coral'}>{q.successPct}% success</Badge>
-                <Badge variant={q.reframes > 0 ? 'purple' : 'gray'}>{q.reframes} reframe{q.reframes !== 1 ? 's' : ''}</Badge>
-              </div>
-            </div>
-            <div style={{ fontSize: 12, color: q.flagged ? 'var(--coral-dark)' : 'var(--text-muted)', lineHeight: 1.6 }}>
-              {q.description}
-            </div>
+      <div className="card">
+        <div className="card-title">AGGREGATE QUESTION PERFORMANCE</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 12 }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 600, color: avgPct >= 75 ? 'var(--teal)' : avgPct >= 60 ? 'var(--amber)' : 'var(--coral)' }}>{avgPct}%</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Avg accuracy</div>
           </div>
-        );
-      })}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 600, color: 'var(--text)' }}>{avgCorrect}/{avgTotal}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Avg correct/total</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 600, color: 'var(--text)' }}>{studentSubs.length}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Submissions</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ---------- Insights Tab ----------
-function InsightsTab({ data }) {
-  const bgMap = {
-    warning: 'var(--coral-light)',
-    amber: 'var(--amber-light)',
-    info: '#D9EEFA',
-    positive: 'var(--green-light)',
-  };
-  const iconMap = {
-    warning: '⚠',
-    amber: '◆',
-    info: '◉',
-    positive: '✓',
-  };
-  const colorMap = {
-    warning: 'var(--coral-dark)',
-    amber: 'var(--amber-dark)',
-    info: 'var(--blue-dark)',
-    positive: 'var(--green-dark)',
-  };
+function InsightsTab({ assignment, enrolledStudents, submissions }) {
+  const studentSubs = enrolledStudents.map(s => submissions[`${assignment.id}_${s.id}`]).filter(s => s && s.status === 'completed');
+
+  if (studentSubs.length === 0) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>💡</div>
+        <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>No insights yet</div>
+        <div style={{ fontSize: 13 }}>
+          AI-generated insights will appear once students complete this assignment.
+        </div>
+      </div>
+    );
+  }
+
+  const avgScore = Math.round(studentSubs.reduce((sum, s) => sum + (s.score || 0), 0) / studentSubs.length);
+  const totalReframes = studentSubs.reduce((sum, s) => sum + (s.reframes || 0), 0);
+  const insights = [];
+
+  if (avgScore < 60) {
+    insights.push({ type: 'warning', text: `**Average score is ${avgScore}%** — this assignment may be too difficult for the current class level. Consider simplifying or breaking it into smaller steps.` });
+  } else if (avgScore >= 85) {
+    insights.push({ type: 'positive', text: `**Great results!** Average score of ${avgScore}% shows strong understanding. Students are ready to move to more challenging material.` });
+  }
+
+  if (totalReframes > 0) {
+    insights.push({ type: 'amber', text: `**${totalReframes} AI reframe${totalReframes !== 1 ? 's' : ''} triggered** during this assignment. Review which students needed extra help and consider adjusting their learning profiles.` });
+  }
+
+  enrolledStudents.forEach(student => {
+    const sub = submissions[`${assignment.id}_${student.id}`];
+    if (sub && sub.status === 'completed' && (sub.score || 0) < 50) {
+      insights.push({ type: 'amber', text: `**${student.name} scored ${sub.score}%** on this assignment. Consider a 1:1 check-in or adjusting their learning style/difficulty.` });
+    }
+  });
+
+  if (insights.length === 0) {
+    insights.push({ type: 'info', text: `**${studentSubs.length} student${studentSubs.length !== 1 ? 's' : ''} completed this assignment.** All results look healthy. Keep up the great work!` });
+  }
+
+  const bgMap = { warning: 'var(--coral-light)', amber: 'var(--amber-light)', info: '#D9EEFA', positive: 'var(--green-light)' };
+  const iconMap = { warning: '⚠', amber: '◆', info: '◉', positive: '✓' };
+  const colorMap = { warning: 'var(--coral-dark)', amber: 'var(--amber-dark)', info: 'var(--blue-dark)', positive: 'var(--green-dark)' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="card-title">GEMMA-GENERATED INSIGHTS FOR THIS ASSIGNMENT</div>
-
-      {data.insights.map((insight, i) => (
+      <div className="card-title">INSIGHTS FOR THIS ASSIGNMENT</div>
+      {insights.map((insight, i) => (
         <div key={i} style={{
           padding: '16px 20px', borderRadius: 10,
           background: bgMap[insight.type] || 'var(--gray-light)',
@@ -300,12 +323,74 @@ function InsightsTab({ data }) {
 
 // ---------- Main Reports Page ----------
 export default function TeacherReports() {
-  const [selectedId, setSelectedId] = useState(REPORT_ASSIGNMENTS[0]?.id);
+  const { userProfile } = useAuth();
+  const [selectedId, setSelectedId] = useState(ALL_REPORT_ITEMS[0]?.id);
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedSubjects, setExpandedSubjects] = useState(SUBJECT_ORDER);
+  const [enrolledStudents, setEnrolledStudents] = useState([]);
+  const [submissions, setSubmissions] = useState({});
 
-  const selected = REPORT_ASSIGNMENTS.find(a => a.id === selectedId) || REPORT_ASSIGNMENTS[0];
-  const grouped = groupBySubject(REPORT_ASSIGNMENTS);
+  const classCodes = (userProfile?.classes || []).map(c => c.code).filter(Boolean);
+
+  // Fetch real enrolled students
+  useEffect(() => {
+    if (!classCodes.length) return;
+    async function fetchStudents() {
+      try {
+        const q = query(collection(db, 'users'), where('role', '==', 'student'), where('classCode', 'in', classCodes.slice(0, 10)));
+        const snap = await getDocs(q);
+        const students = snap.docs.map(d => {
+          const data = d.data();
+          const name = data.name || 'Student';
+          const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+          return {
+            id: d.id,
+            name,
+            initials,
+            grade: data.grade || '',
+            avatarColor: { bg: '#E6F1FB', text: '#042C53' },
+            learningStyles: data.learningStyles || [],
+            characters: data.characters || [],
+          };
+        });
+        setEnrolledStudents(students);
+      } catch (e) {
+        console.error('Failed to fetch enrolled students:', e);
+      }
+    }
+    fetchStudents();
+  }, [classCodes.join(',')]);
+
+  // Fetch all submissions
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+    async function fetchSubmissions() {
+      try {
+        const q = query(collection(db, 'submissions'), where('teacherUid', '==', userProfile.uid));
+        const snap = await getDocs(q);
+        const subs = {};
+        snap.forEach(d => {
+          const data = d.data();
+          const key = `${data.assignmentId}_${data.studentUid}`;
+          subs[key] = data;
+        });
+        setSubmissions(subs);
+      } catch (e) {
+        console.error('Failed to fetch submissions:', e);
+      }
+    }
+    fetchSubmissions();
+  }, [userProfile?.uid]);
+
+  const selected = ALL_REPORT_ITEMS.find(a => a.id === selectedId) || ALL_REPORT_ITEMS[0];
+  const grouped = groupBySubject(ALL_REPORT_ITEMS);
+
+  // Compute real student count and submission count for header
+  const completedCount = enrolledStudents.filter(s => submissions[`${selected.id}_${s.id}`]?.status === 'completed').length;
+  const totalReframes = enrolledStudents.reduce((sum, s) => {
+    const sub = submissions[`${selected.id}_${s.id}`];
+    return sum + (sub?.reframes || 0);
+  }, 0);
 
   function toggleSubject(subject) {
     setExpandedSubjects(prev =>
@@ -381,7 +466,7 @@ export default function TeacherReports() {
             {selected.subject} — {selected.title} ({selected.date})
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-            {selected.studentCount} students · {selected.questionCount} questions · {selected.totalReframes} reframe{selected.totalReframes !== 1 ? 's' : ''}
+            {enrolledStudents.length} student{enrolledStudents.length !== 1 ? 's' : ''} enrolled · {completedCount} completed · {totalReframes} reframe{totalReframes !== 1 ? 's' : ''}
           </div>
         </div>
 
@@ -405,30 +490,10 @@ export default function TeacherReports() {
         </div>
 
         {/* Tab content */}
-        {activeTab === 'overview' && <OverviewTab data={selected} />}
-        {activeTab === 'per-student' && <PerStudentTab data={selected} />}
-        {activeTab === 'questions' && <QuestionsTab data={selected} />}
-        {activeTab === 'insights' && <InsightsTab data={selected} />}
-
-        {/* Recommendations (always shown at bottom) */}
-        {activeTab === 'insights' && (
-          <div style={{ marginTop: 24 }}>
-            <div className="card">
-              <div className="card-title">Recommendations</div>
-              {selected.insights.filter(i => i.type === 'positive' || i.type === 'amber').slice(0, 3).map((rec, i) => (
-                <div key={i} style={{
-                  display: 'flex', gap: 10, padding: '8px 0',
-                  borderBottom: i < 2 ? '0.5px solid var(--border)' : 'none',
-                }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--purple)', flexShrink: 0, marginTop: 5 }} />
-                  <div style={{ fontSize: 12 }} dangerouslySetInnerHTML={{
-                    __html: renderBoldMarkdown(rec.text),
-                  }} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {activeTab === 'overview' && <OverviewTab assignment={selected} enrolledStudents={enrolledStudents} submissions={submissions} />}
+        {activeTab === 'per-student' && <PerStudentTab assignment={selected} enrolledStudents={enrolledStudents} submissions={submissions} />}
+        {activeTab === 'questions' && <QuestionsTab assignment={selected} enrolledStudents={enrolledStudents} submissions={submissions} />}
+        {activeTab === 'insights' && <InsightsTab assignment={selected} enrolledStudents={enrolledStudents} submissions={submissions} />}
       </div>
     </div>
   );

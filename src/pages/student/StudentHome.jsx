@@ -1,20 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ASSIGNMENTS } from '../../lib/mockData';
 import { Badge } from '../../components/UI';
 import { useAuth } from '../../lib/AuthContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 export default function StudentHome() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const [mood, setMood] = useState(null);
+  const [completedIds, setCompletedIds] = useState(new Set());
 
   const studentName = userProfile?.name?.split(' ')[0] || 'Student';
   const characters = userProfile?.characters || [];
   const charName = characters[0] || 'your character';
 
-  const newAssignments  = ASSIGNMENTS.filter(a => a.status === 'new');
-  const doneAssignments = ASSIGNMENTS.filter(a => a.status === 'done');
+  // Fetch completed assignments from Firestore
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+    async function fetchSubmissions() {
+      try {
+        const q = query(
+          collection(db, 'submissions'),
+          where('studentUid', '==', userProfile.uid),
+          where('status', '==', 'completed'),
+        );
+        const snap = await getDocs(q);
+        const ids = new Set();
+        snap.forEach(d => ids.add(d.data().assignmentId));
+        setCompletedIds(ids);
+      } catch (e) {
+        console.error('Failed to fetch submissions:', e);
+      }
+    }
+    fetchSubmissions();
+  }, [userProfile?.uid]);
+
+  // Derive assignment status from Firestore submissions
+  const newAssignments = ASSIGNMENTS.filter(a => a.status !== 'done' && !completedIds.has(a.id));
+  const doneAssignments = ASSIGNMENTS.filter(a => a.status === 'done' || completedIds.has(a.id));
 
   const moodFaceStyle = (m) => ({
     width: 60, height: 60, borderRadius: '50%',
@@ -65,33 +90,37 @@ export default function StudentHome() {
         </div>
       )}
 
-      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', marginBottom: -6 }}>
-        Today's homework
-      </div>
-      {newAssignments.map(a => (
-        <div
-          key={a.id}
-          className="card"
-          style={{
-            border: '2px solid var(--purple)', cursor: 'pointer', transition: 'all 0.15s',
-            borderRadius: 'var(--radius)',
-          }}
-          onClick={() => navigate(`/student/lesson/${a.id}`)}
-        >
-          <div className="row-between">
-            <div>
-              <div style={{ fontWeight: 500, fontSize: 14 }}>{a.title}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                {a.subject} · Due {a.dueDate}
+      {newAssignments.length > 0 && (
+        <>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', marginBottom: -6 }}>
+            Today's homework
+          </div>
+          {newAssignments.map(a => (
+            <div
+              key={a.id}
+              className="card"
+              style={{
+                border: '2px solid var(--purple)', cursor: 'pointer', transition: 'all 0.15s',
+                borderRadius: 'var(--radius)',
+              }}
+              onClick={() => navigate(`/student/lesson/${a.id}`)}
+            >
+              <div className="row-between">
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{a.title}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {a.subject} · Due {a.dueDate}
+                  </div>
+                </div>
+                <Badge variant="purple">New</Badge>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--purple)', marginTop: 8, fontWeight: 500 }}>
+                Tap to start
               </div>
             </div>
-            <Badge variant="purple">New</Badge>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--purple)', marginTop: 8, fontWeight: 500 }}>
-            Tap to start
-          </div>
-        </div>
-      ))}
+          ))}
+        </>
+      )}
 
       {doneAssignments.length > 0 && (
         <>

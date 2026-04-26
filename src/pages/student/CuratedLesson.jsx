@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getAssignment, getStudent } from '../../lib/mockData';
 import { useFrustration } from '../../lib/useFrustration';
 import { useAuth } from '../../lib/AuthContext';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 const MODE_META = {
   Visual:   { label: 'Visual', color: 'var(--purple)',      bg: 'var(--purple-light)', dotColor: 'var(--purple)' },
@@ -42,11 +44,17 @@ export default function CuratedLesson() {
   const [showHintBox, setShowHintBox] = useState(false);
   const [narrating, setNarrating]   = useState(false);
   const wrongRef = useRef(0);
+  const correctRef = useRef(0);
+  const reframeCountRef = useRef(0);
+  const reframePendingRef = useRef(false);
 
   const question = questions[qIndex];
   const meta     = MODE_META[mode] || MODE_META.Visual;
 
   const onFrustrationTriggered = useCallback((score) => {
+    if (reframePendingRef.current) return;
+    reframePendingRef.current = true;
+    reframeCountRef.current += 1;
     navigate('/student/reframe', {
       state: {
         question,
@@ -55,9 +63,12 @@ export default function CuratedLesson() {
         assignmentId,
         qIndex,
         studentId: studentProfile.id || 'student',
+        correctSoFar: correctRef.current,
+        totalQuestions: questions.length,
+        reframesSoFar: reframeCountRef.current,
       },
     });
-  }, [navigate, question, studentProfile, assignmentId, qIndex]);
+  }, [navigate, question, studentProfile, assignmentId, qIndex, questions.length]);
 
   const frustration = useFrustration({ onFrustrationTriggered });
 
@@ -80,6 +91,7 @@ export default function CuratedLesson() {
     frustration.recordClick();
     setSelected(idx);
     if (idx === question.correctIndex) {
+      correctRef.current += 1;
       setFeedback({ correct: true, text: 'Correct! Great job!' });
       frustration.recordCorrectAnswer();
     } else {
@@ -89,10 +101,17 @@ export default function CuratedLesson() {
       if (showHint) setShowHintBox(true);
       setFeedback({ correct: false, text: showHint ? (question.hint || 'Try again!') : 'Not quite — try again!' });
       setSelected(null);
-      if (wrongRef.current >= 3) {
+      if (wrongRef.current >= 3 && !reframePendingRef.current) {
+        reframePendingRef.current = true;
+        reframeCountRef.current += 1;
         setTimeout(() => {
           navigate('/student/reframe', {
-            state: { question, studentProfile, wrongAttempts: wrongRef.current, assignmentId, qIndex, studentId: studentProfile.id || 'student' },
+            state: {
+              question, studentProfile, wrongAttempts: wrongRef.current,
+              assignmentId, qIndex, studentId: studentProfile.id || 'student',
+              correctSoFar: correctRef.current, totalQuestions: questions.length,
+              reframesSoFar: reframeCountRef.current,
+            },
           });
         }, 1500);
       }
@@ -111,9 +130,32 @@ export default function CuratedLesson() {
       setFeedback(null);
       setShowHintBox(false);
       wrongRef.current = 0;
+      reframePendingRef.current = false;
       frustration.reset();
     } else {
-      navigate('/student/complete');
+      // Save submission and navigate to completion
+      const totalQ = questions.length;
+      const correctQ = correctRef.current;
+      const scoreVal = totalQ > 0 ? Math.round((correctQ / totalQ) * 100) : 0;
+      if (userProfile?.uid) {
+        const subId = `${assignmentId}_${userProfile.uid}`;
+        setDoc(doc(db, 'submissions', subId), {
+          assignmentId,
+          studentUid: userProfile.uid,
+          studentName: userProfile.name || '',
+          classCode: userProfile.classCode || '',
+          teacherUid: userProfile.teacherUid || '',
+          status: 'completed',
+          score: scoreVal,
+          questionsCorrect: correctQ,
+          questionsTotal: totalQ,
+          reframes: reframeCountRef.current,
+          completedAt: serverTimestamp(),
+        }).catch(err => console.error('Failed to save submission:', err));
+      }
+      navigate('/student/complete', {
+        state: { assignmentId, score: correctQ, total: totalQ, reframes: reframeCountRef.current },
+      });
     }
   };
 
