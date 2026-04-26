@@ -1,6 +1,6 @@
 # Testing Spectra Teacher Views
 
-This skill covers end-to-end testing of the teacher-facing pages: Dashboard, Assignments, and Reports.
+This skill covers end-to-end testing of the teacher-facing pages: Dashboard, Assignments, Reports, and Student Profile.
 
 ## Prerequisites
 
@@ -27,49 +27,59 @@ The app uses Firebase auth with a `RequireTeacher` guard in `src/App.js`. To byp
 
 Alternatively, if Firebase config is valid, you can create a real test account via `/teacher/signup` and log in normally. This is preferred when testing auth-related changes.
 
-The teacher routes are:
-- `/teacher/dashboard` — Dashboard with student cards, assignments, past assignments
-- `/teacher/assignments` — Assignment creation + published assignments tracking
-- `/teacher/reports` — Reports with sidebar + tabbed detail views
+## Teacher Routes
+
+- `/teacher/dashboard` — Dashboard with student cards, stat cards, current/past assignments
+- `/teacher/upload` — Assignment creation + lesson preview + published assignments tracking
+- `/teacher/reports` — Reports with sidebar + tabbed detail views (Overview, Per Student, Questions, Insights)
 - `/teacher/settings` — Settings page
-
-## Key Test Flows for Reports Page
-
-The Reports page (`src/pages/teacher/TeacherReports.jsx`) uses mock data from `src/lib/mockData.js`.
-
-### Sidebar
-- 4 subject groups: Mathematics, Reading, Science, Social Skills
-- Each group is collapsible (click header to toggle)
-- Assignments have color-coded dots (coral = flagged, amber = warning, teal = good)
-- Default selection: first assignment (Addition Q1-Q5)
-
-### Tabs (per assignment)
-1. **Overview**: 4 stat cards (Avg Score, Completion, AI Reframes, Avg Engagement) + Score by Learning Style bars + Reframes by Strategy bars + Question Difficulty Heatmap
-2. **Per Student**: Student performance table with avatar, mode badge, score/engagement bars, reframes, pattern detected + AI Reframe Log with severity badges
-3. **Questions**: Per-question breakdown cards with success %, reframes, descriptions. Flagged questions have red/coral border
-4. **Insights**: Color-coded Gemma insight cards (warning=red, amber=yellow, info=blue, positive=green) + Recommendations section at bottom
-
-### What to Verify
-- Sidebar navigation switches the selected assignment and updates all tab content
-- Tab switching works without errors
-- Flagged questions (e.g., Q3 in Addition) show red borders
-- "Recommendations" label is used (not "AI recommendations")
-- No date range filters or flagged chat phrases sections exist
-- Bold text in insight cards renders correctly without XSS (uses `escapeHtml` + `renderBoldMarkdown`)
+- `/teacher/profile/:studentId` — Individual student profile with learning preferences, frustration history, and adaptation info
 
 ## Mock Data Structure
 
 All data is in `src/lib/mockData.js`:
-- `STUDENTS` — 5 students (jamie, maya, eli, sofia, aisha)
-- `REPORT_ASSIGNMENTS` — 8 assignments across 4 subjects
+- `STUDENTS` — 4 students: jamie (Visual), maya (Auditory), eli (Kinesthetic), sofia (Reading)
+- `PUBLISHED_ASSIGNMENTS` — Active assignments with per-student tracking
+- `PAST_ASSIGNMENTS` — Completed assignments with scores
+- `REPORT_ASSIGNMENTS` — 8 assignments across 4 subjects with detailed stats
 - `REPORT_SUBJECT_META` — Subject icons and colors
 - Each assignment has: overview stats, student results, reframe log, questions, insights
+
+## Key Test Flows
+
+### Dashboard (`/teacher/dashboard`)
+- Verify stat cards: Students count, Lessons today, Avg engagement, AI reframes
+- Verify student grid shows all mock students with correct learning style badges
+- Verify frustration alert banner (Eli has high frustration)
+- Verify current/past assignment lists with correct student counts
+
+### Upload Page (`/teacher/upload`)
+- The preview panel header should show a student name (e.g., "Preview — Jamie L.") — if it shows just "Preview — Student" or is blank, the `previewStudent` state might not be initialized
+- "Assign to" dropdown should show "All students (N)" matching the STUDENTS array length
+- Published Assignments section lists per-student progress with learning style + theme badges
+- If Cloudinary/ElevenLabs integration is not yet active, there should be no placeholder boxes in the preview panel
+
+### Student Profile (`/teacher/profile/:studentId`)
+- Learning style tags, character tags, sensory preferences, and frustration triggers are toggleable
+- Clicking "Save profile" should provide feedback (button changes to "Edit profile", success toast appears)
+- For mock students, save is local-only (no Firestore write). If save silently does nothing, check the `handleSave` function's guard for `student.firestoreStudent`
+- Frustration history chart shows 7 bars (Mon–Sun)
+- "Current assignment adaptation" section should show themed content without Cloudinary/ElevenLabs mentions (unless those integrations are active)
+
+### Reports Page (`/teacher/reports`)
+- Sidebar has 4 subject groups: Mathematics, Reading, Science, Social Skills (collapsible)
+- Each group is collapsible (click header to toggle)
+- Assignments have color-coded dots (coral = flagged, amber = warning, teal = good)
+- Tabs per assignment: Overview, Per Student, Questions, Insights
+- Per Student tab should show exactly the number of students in STUDENTS array
+- Bold text in insight cards renders correctly without XSS (uses `escapeHtml` + `renderBoldMarkdown`)
 
 ## Common Issues
 
 - If the page shows a blank screen or redirect, check the browser console for errors. Common causes: Firebase config has placeholder values, or auth bypass not applied.
 - The dev server may take 10-20 seconds for initial compilation. Wait for the "Compiled successfully" message in the terminal.
 - Port 3000 might already be in use from a previous session. Check with `lsof -i :3000` and kill any existing processes.
+- Proxy errors for `/favicon.ico` to `localhost:3001` are expected if the Express backend is not running — this is harmless for frontend-only testing.
 
 ## Devin Secrets Needed
 
