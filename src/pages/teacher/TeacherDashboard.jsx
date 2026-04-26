@@ -19,9 +19,9 @@ export default function TeacherDashboard() {
             <strong>{s.name}</strong> — high frustration detected. AI has auto-reframed.{' '}
             <span
               style={{ textDecoration: 'underline', cursor: 'pointer' }}
-              onClick={() => navigate('/teacher/monitor')}
+              onClick={() => navigate(`/teacher/profile/${s.id}`)}
             >
-              View live monitor →
+              View student profile →
             </span>
           </div>
         </Alert>

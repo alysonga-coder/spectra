@@ -8,7 +8,6 @@ import { db } from '../lib/firebase';
 const NAV_ITEMS = [
   { label: 'Dashboard',   path: '/teacher/dashboard' },
   { label: 'Assignments', path: '/teacher/upload' },
-  { label: 'Live monitor',path: '/teacher/monitor' },
   { label: 'Reports',     path: '/teacher/reports' },
   { label: 'Settings',    path: '/teacher/settings' },
 ];
