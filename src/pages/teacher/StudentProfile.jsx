@@ -94,8 +94,11 @@ export default function StudentProfile() {
     prev.includes(value) ? prev.filter(x => x !== value) : [...prev, value]
   );
 
+  const [saveError, setSaveError] = useState(false);
+
   const handleSave = async () => {
-    if (student.firestoreStudent) {
+    setSaveError(false);
+    if (student.firestoreStudent && firestoreData) {
       try {
         await updateDoc(doc(db, 'users', studentId), {
           learningStyles: selectedStyles,
@@ -103,13 +106,15 @@ export default function StudentProfile() {
           sensoryPrefs: selectedSensory,
           frustrationTriggers: selectedTriggers,
         });
+        setEditing(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
       } catch (e) {
         console.error('Failed to save student profile:', e);
+        setSaveError(true);
+        setTimeout(() => setSaveError(false), 3000);
       }
     }
-    setEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   };
 
   const frustrationVariant = idx => {
@@ -136,6 +141,9 @@ export default function StudentProfile() {
 
       {saved && (
         <div className="alert alert-info">Profile saved successfully.</div>
+      )}
+      {saveError && (
+        <div className="alert" style={{ background: 'var(--coral-light)', color: 'var(--coral-dark)', border: '1px solid var(--coral)' }}>Failed to save profile. Please try again.</div>
       )}
 
       <div className="grid-2" style={{ gap: 16, alignItems: 'start' }}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { REPORT_ASSIGNMENTS, REPORT_SUBJECT_META } from '../../lib/mockData';
+import { PUBLISHED_ASSIGNMENTS, PAST_ASSIGNMENTS, REPORT_SUBJECT_META } from '../../lib/mockData';
 import { Avatar, Badge, ProgressBar } from '../../components/UI';
 import { useAuth } from '../../lib/AuthContext';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -19,6 +19,26 @@ const TABS = [
   { key: 'per-student', label: 'Per student' },
   { key: 'questions',   label: 'Questions' },
   { key: 'insights',    label: 'Insights' },
+];
+
+// Build a unified list of assignments for the reports sidebar from actual assignment data
+const ALL_REPORT_ITEMS = [
+  ...PUBLISHED_ASSIGNMENTS.map(a => ({
+    id: a.id,
+    subject: a.subject === 'Math' ? 'Mathematics' : a.subject,
+    title: a.title,
+    date: a.dueDate ? a.dueDate.replace(', 2026', '') : '',
+    dot: 'teal',
+    isCurrent: true,
+  })),
+  ...PAST_ASSIGNMENTS.map(a => ({
+    id: a.id,
+    subject: a.subject === 'Math' ? 'Mathematics' : a.subject,
+    title: a.title,
+    date: a.completedDate ? a.completedDate.replace(', 2026', '') : '',
+    dot: 'purple',
+    isCurrent: false,
+  })),
 ];
 
 const SUBJECT_ORDER = ['Mathematics', 'Reading', 'Science', 'Social Skills'];
@@ -304,7 +324,7 @@ function InsightsTab({ assignment, enrolledStudents, submissions }) {
 // ---------- Main Reports Page ----------
 export default function TeacherReports() {
   const { userProfile } = useAuth();
-  const [selectedId, setSelectedId] = useState(REPORT_ASSIGNMENTS[0]?.id);
+  const [selectedId, setSelectedId] = useState(ALL_REPORT_ITEMS[0]?.id);
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedSubjects, setExpandedSubjects] = useState(SUBJECT_ORDER);
   const [enrolledStudents, setEnrolledStudents] = useState([]);
@@ -362,8 +382,8 @@ export default function TeacherReports() {
     fetchSubmissions();
   }, [userProfile?.uid]);
 
-  const selected = REPORT_ASSIGNMENTS.find(a => a.id === selectedId) || REPORT_ASSIGNMENTS[0];
-  const grouped = groupBySubject(REPORT_ASSIGNMENTS);
+  const selected = ALL_REPORT_ITEMS.find(a => a.id === selectedId) || ALL_REPORT_ITEMS[0];
+  const grouped = groupBySubject(ALL_REPORT_ITEMS);
 
   // Compute real student count and submission count for header
   const completedCount = enrolledStudents.filter(s => submissions[`${selected.id}_${s.id}`]?.status === 'completed').length;
